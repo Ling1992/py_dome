@@ -1,7 +1,7 @@
 # _*_ encoding=utf-8 _*_
 
 import requests
-
+import json
 
 domain = 'http://www.toutiao.com'
 
@@ -31,9 +31,12 @@ print ''.join([domain, title_url])
 
 title_respond = requests.get(''.join([domain, title_url]))
 
+first_list_url = 'http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time=0&max_behot_time_tmp=0&tadrequire=true&as=A1D548AF0DBC351&cp=58FD3CF385E10E1'
 title_list_url = 'http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time=1493016519&max_behot_time_tmp=1493016519&tadrequire=true&as=A16518DFBD3A23C&cp=58FD7AC2437C6E1'
 
+title_list_respond = requests.get(title_list_url)
 
+with open('title_list_content.txt', 'w') as f:
+    f.write(title_list_respond.content)
 
-
-
+print json.loads(title_list_respond.content)
