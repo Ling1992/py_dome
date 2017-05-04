@@ -31,7 +31,7 @@ class MysqlLing(object):
             print e
             self.db.rollback()
             print 'rollback'
-            return  False
+            return False
 
     def count(self, sql_str):
         count = self.cursor.execute(sql_str)
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     # sql = "insert into article(title, article) values ('%s', '%s') " % ('test_title ', '啊哈哈哈哈')
     # sql = "select * from article where title='aaaa'"
     # sql = "insert into article(article_id, title, article) values ('%d', '%s', '%s') " % (11, 'test_title ', '啊哈哈哈哈')
-    sql = "insert into article_list(title, abstract, article_id, group_id, category_id) values ('%s', '%s', '%d', '%d', '%d') " % ('asdfjl', 'test_title ', 12, 131, 11)
+    sql = "insert into article_list(title, abstract, group_id, category_id) values ('%s', '%s', '%d', '%d', '%d') " % ('asdfjl', 'test_title ', 12, 131, 11)
     mysql = MysqlLing()
     res = mysql.insert(sql)
     if res:

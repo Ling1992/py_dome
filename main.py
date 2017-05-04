@@ -42,30 +42,37 @@ print ''.join([domain, title_url])
 
 title_respond = requests.get(''.join([domain, title_url]))
 
-title_list_url = 'http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time=0&max_behot_time_tmp=0&tadrequire=true&as=A11539D0713B436&cp=59013B14E316DE1'
+title_list_url = 'http://www.toutiao.com/api/pc/feed/?category=news_society&utm_source=toutiao&widen=1&max_behot_time=0&max_behot_time_tmp=0&tadrequire=true&as=A11539D0713B436&cp=59013B14E316DE1'
+uri = 'http://www.toutiao.com/api/pc/feed/?category=news_society&utm_source=toutiao&widen=1&max_behot_time=%s&max_behot_time_tmp=%s&tadrequire=true&as=A11539D0713B436&cp=59013B14E316DE1'
 
 url = title_list_url
 conn = requests.session()
 conn.keep_alive = False
 
+regex = re.compile(r'^search/\?')  # 提问 回答
+
 while 1:
     print url
-    title_list_respond = requests.get(url,headers=headers)
+    title_list_respond = requests.get(url)
     print title_list_respond.status_code, title_list_respond.reason
     if title_list_respond.status_code != 200:
         break
     title_list_content = json.loads(title_list_respond.content)
     behot_time = title_list_content['next']['max_behot_time']
-    url = title_list_url
+    url = uri % (str(behot_time), str(behot_time))
     print 'max_behot_time', title_list_content['next']     # max_behot_time
 
     for item in title_list_content['data']:
         print item
-        if item.get('has_gallery'):
-            continue
-        if item.get('has_video'):
-            continue
-        if item.get('source_url') == '':
+        # if item.get('has_gallery'):
+        #     continue
+        # if item.get('has_video'):
+        #     continue
+        # if item.get('source_url') == '':
+        #     continue
+        # if not item.get('middle_mode'):
+        #     continue
+        if item["article_genre"] != "article" and item["source"] == u"头条问答":
             continue
         article_url = ''.join([domain, item.get('source_url')])
         print article_url
