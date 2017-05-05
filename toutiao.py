@@ -18,11 +18,12 @@ category = {
     # "news_entertainment": 0,
     # "news_sports": 0,
     # "news_sports": 0,
-    "news_hot": 0,
+    "news_hot": {"time_sec": 0, "for_times": 1},
     # "news_society": 0,
     # "news_society": 0,
     # "news_car": 0
 }
+model = 1
 
 apiurl = "http://www.toutiao.com/api/pc/feed/?category={0}&utm_source=toutiao&widen=1&max_behot_time={1}&max_behot_time_tmp=0&tadrequire=false&as=A175990077EECF2&cp=59078EBCCFF2DE1"
 apiurl1 = "http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time=0&max_behot_time_tmp=0&tadrequire=false&as=A175990077EECF2&cp=59078EBCCFF2DE1"
@@ -32,21 +33,19 @@ def ttrequsts(url, **args):
     print url
     agent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"
     header = {
-        # "HOST": "www.toutiao.com", # 301 重定向问题
+        # "HOST": "www.toutiao.com", # 解决 301 重定向问题
         "Referfer": "www.toutiao.com",
         "User-Agent": agent
     }
-
     # 默认的是FileCookieJar没有实现save函数。
     # 而MozillaCookieJar或LWPCookieJar都已经实现了。
     # 所以可以用MozillaCookieJar或LWPCookieJar，去自动实现cookie的save。
     # 实现，通过文件保存cookie。
     # 建议用LWPCookieJar，其保存的cookie，易于人类阅读
-
     session = requests.Session()
-    session.cookies = cookielib.LWPCookieJar(filename="cookies2.txt")
+    session.cookies = cookielib.LWPCookieJar(filename="cache/cookies2.txt")
     try:
-        # ignore_discard=True, ignore_expires=True 忽略关闭浏览器丢失，忽略失效  --在文件中读取cookie
+        # ignore_discard=True 忽略关闭浏览器丢失 , ignore_expires=True ,忽略失效  --load() 在文件中读取cookie
         session.cookies.load(ignore_discard=True)
     except:
         print u"failed load cookie"
@@ -56,16 +55,18 @@ def ttrequsts(url, **args):
     except Exception as e:
         print e
         return None
-    print response.status_code
+    print response.status_code, response.reason
     if response and response.status_code == 200:
         return response
 
 
 def start():
     global category
+    global model
     # url = apiurl.format(str(int(time.time()))[:10])
     while 1:
         ckey = getTkey()
+
         # python从2.6开始支持format
         # data = {'first': 'Hodor', 'last': 'Hodor!'}
         # Old
@@ -74,6 +75,7 @@ def start():
         # '{first} {last}'.format(**data)
         # Output
         # Hodor Hodor!
+
         url = apiurl.format(ckey, category[ckey])
         # url = apiurl1
         print "{0}==={1}".format(ckey, url)
@@ -186,6 +188,7 @@ def getTkey():
 
 
 if __name__ == "__main__":
+
     threads = []
     for _, v in category.iteritems():
         tf = threading.Thread(target=start, name=_)

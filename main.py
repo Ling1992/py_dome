@@ -1,12 +1,15 @@
 # _*_ encoding=utf-8 _*_
 
+import json
+import sys
+import time
+
+import re
 import requests
 from bs4 import BeautifulSoup
-from get_article import MysqlLing
-import time
-import json
-import re
-import sys
+
+from base_class.ling_mysql import MysqlLing
+
 reload(sys)
 sys.setdefaultencoding("utf8")
 
@@ -17,30 +20,6 @@ headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_4) AppleW
 domain = 'http://www.toutiao.com'
 
 domain_respond = requests.get(domain)
-"""
-    首页 找出 需要的数据
-"""
-
-with open('domain_content.html', 'w') as f:
-    f.write(domain_respond.content)
-
-heard_list_url = 'http://s3a.pstatp.com/toutiao/resource/ntoutiao_web/page/home/whome/home_465fa88.js'
-
-heard_list_respond = requests.get(heard_list_url)
-"""
-    .js 文件的处理
-"""
-with open('heard_list_content.txt', 'w') as f:
-    f.write(heard_list_respond.content)
-
-
-# 热点
-title_url = '/ch/news_hot/'
-
-print ''.join([domain, title_url])
-
-
-title_respond = requests.get(''.join([domain, title_url]))
 
 title_list_url = 'http://www.toutiao.com/api/pc/feed/?category=news_society&utm_source=toutiao&widen=1&max_behot_time=0&max_behot_time_tmp=0&tadrequire=true&as=A11539D0713B436&cp=59013B14E316DE1'
 uri = 'http://www.toutiao.com/api/pc/feed/?category=news_society&utm_source=toutiao&widen=1&max_behot_time=%s&max_behot_time_tmp=%s&tadrequire=true&as=A11539D0713B436&cp=59013B14E316DE1'
