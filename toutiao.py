@@ -2,7 +2,8 @@
 
 import cookielib
 import sys
-
+import random
+import time
 import requests
 from pyquery import PyQuery as pq
 
@@ -13,30 +14,51 @@ import threading
 
 sys.setdefaultencoding("utf-8")
 
+# key 专题 { time_sec 需保存的参数behot_time   for_times 最大循环次数  model 模式 }
+#       -->模式1 : behot_time 一直为0 ,模式2 : behot_time 取每次请求返回的值 , 模式3 : behot_time 每次时间戳减10 获取半年内数据
+
+model = 3
+for_times = 2
 category = {
     # "news_tech": 0,
     # "news_entertainment": 0,
     # "news_sports": 0,
     # "news_sports": 0,
-    "news_hot": {"time_sec": 0, "for_times": 1},
+    "news_hot": {"time_sec": 0, "for_times": for_times, "model": model},
     # "news_society": 0,
     # "news_society": 0,
     # "news_car": 0
 }
-model = 1
 
 apiurl = "http://www.toutiao.com/api/pc/feed/?category={0}&utm_source=toutiao&widen=1&max_behot_time={1}&max_behot_time_tmp=0&tadrequire=false&as=A175990077EECF2&cp=59078EBCCFF2DE1"
-apiurl1 = "http://www.toutiao.com/api/pc/feed/?category=news_hot&utm_source=toutiao&widen=1&max_behot_time=0&max_behot_time_tmp=0&tadrequire=false&as=A175990077EECF2&cp=59078EBCCFF2DE1"
+agent = [
+    "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
+    "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; Acoo Browser; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.0.04506)",
+    "Mozilla/4.0 (compatible; MSIE 7.0; AOL 9.5; AOLBuild 4337.35; Windows NT 5.1; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
+    "Mozilla/5.0 (Windows; U; MSIE 9.0; Windows NT 9.0; en-US)",
+    "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0; .NET CLR 3.5.30729; .NET CLR 3.0.30729; .NET CLR 2.0.50727; Media Center PC 6.0)",
+    "Mozilla/5.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; .NET CLR 1.0.3705; .NET CLR 1.1.4322)",
+    "Mozilla/4.0 (compatible; MSIE 7.0b; Windows NT 5.2; .NET CLR 1.1.4322; .NET CLR 2.0.50727; InfoPath.2; .NET CLR 3.0.04506.30)",
+    "Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN) AppleWebKit/523.15 (KHTML, like Gecko, Safari/419.3) Arora/0.3 (Change: 287 c9dfb30)",
+    "Mozilla/5.0 (X11; U; Linux; en-US) AppleWebKit/527+ (KHTML, like Gecko, Safari/419.3) Arora/0.6",
+    "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.2pre) Gecko/20070215 K-Ninja/2.1.1",
+    "Mozilla/5.0 (Windows; U; Windows NT 5.1; zh-CN; rv:1.9) Gecko/20080705 Firefox/3.0 Kapiko/3.0",
+    "Mozilla/5.0 (X11; Linux i686; U;) Gecko/20070322 Kazehakase/0.4.5",
+    "Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.8) Gecko Fedora/1.9.0.8-1.fc10 Kazehakase/0.5.6",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_3) AppleWebKit/535.20 (KHTML, like Gecko) Chrome/19.0.1036.7 Safari/535.20",
+    "Opera/9.80 (Macintosh; Intel Mac OS X 10.6.8; U; fr) Presto/2.9.168 Version/11.52"
+    ]
 
 
 def ttrequsts(url, **args):
     print url
-    agent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"
     header = {
         # "HOST": "www.toutiao.com", # 解决 301 重定向问题
         "Referfer": "www.toutiao.com",
-        "User-Agent": agent
+        "User-Agent": random.choice(agent)
     }
+    print header['User-Agent']
     # 默认的是FileCookieJar没有实现save函数。
     # 而MozillaCookieJar或LWPCookieJar都已经实现了。
     # 所以可以用MozillaCookieJar或LWPCookieJar，去自动实现cookie的save。
@@ -60,13 +82,14 @@ def ttrequsts(url, **args):
         return response
 
 
-def start():
+def start(name):
     global category
-    global model
+    print name
+    current_time = None  # 模式3 专用 时间戳 递减 记录
+    time_total = (365*24*60*60/2)  # 半年时间
+    time_sample = 10  # 时间间隔
     # url = apiurl.format(str(int(time.time()))[:10])
     while 1:
-        ckey = getTkey()
-
         # python从2.6开始支持format
         # data = {'first': 'Hodor', 'last': 'Hodor!'}
         # Old
@@ -76,15 +99,39 @@ def start():
         # Output
         # Hodor Hodor!
 
-        url = apiurl.format(ckey, category[ckey])
+
+        # url = apiurl.format(ckey, category[ckey])
         # url = apiurl1
-        print "{0}==={1}".format(ckey, url)
-        response = ttrequsts(url)
+        # print "{0}==={1}".format(ckey, url)
+        # response = ttrequsts(url)
         # session.cookies.save()
-        if response is not None:
-            arclist = parselist(response)
-            if len(arclist) > 0:
-                crawlarc(arclist)
+        # if response is not None:
+        #     arclist = parselist(response)
+        #     if len(arclist) > 0:
+        #         crawlarc(arclist)
+        print 'model:', category[name]['model']
+        print 'for_times:', category[name]['for_times']
+        # if category[name]['model'] >= 3:
+        #     if current_time is None:
+        #         current_time = int(time.time())
+        #     else:
+        #         current_time -= time_sample
+        # print current_time
+
+        if category[name]['for_times'] <= 0:
+            if category[name]['model'] >= 3:
+                break
+            else:
+                category[name]['model'] += 1
+                if category[name]['model'] >= 3:
+                    category[name]['for_times'] = for_times  # time_total
+                else:
+                    category[name]['for_times'] = for_times
+        else:
+            if category[name]['model'] >= 3:
+                category[name]['for_times'] -= 1  # time_sample
+            else:
+                category[name]['for_times'] -= 1
 
 
 def parselist(response):
@@ -182,16 +229,11 @@ def save(item):
         pass
 
 
-def getTkey():
-    ckey = threading.currentThread().getName()
-    return ckey
-
-
 if __name__ == "__main__":
 
     threads = []
     for _, v in category.iteritems():
-        tf = threading.Thread(target=start, name=_)
+        tf = threading.Thread(target=start, name=_, kwargs={'name': _})
         threads.append(tf)
 
     for t in threads:

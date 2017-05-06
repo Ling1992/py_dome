@@ -2,13 +2,19 @@
 import threading
 from time import ctime, sleep
 
+index1 = 2
 
-def loop(loops, sec, arg):
-    print 'sec:', sec
-    print 'loops : ', loops, 'sec:', ctime(), 'arg:', repr(arg)
-    sleep(sec)
-    print 'loops : ', loops, 'sec:', ctime(), 'current thread name:', threading.current_thread().name
-    test(arg)
+
+def loop(key):
+    # global index1
+    # print 'sec:', sec
+    # print 'loops : ', loops, 'sec:', ctime(), 'arg:', repr(arg)
+    # sleep(kwargs['index'])
+    # index1 = index1 + kwargs['index']
+    # print 'loops : ', loops, 'sec:', ctime(), 'current thread name:', threading.current_thread().name
+    # test(arg)
+    # print index1
+    print key, "\n"
 
 
 def test(arg):
@@ -22,7 +28,7 @@ if __name__ == '__main__':
 
     for key in category:
         print key, category[key]['index'], category[key]['name']
-        t = threading.Thread(target=loop, args=(key, category[key]['index'], category[key]['name']), name='{}121'.format(key))
+        t = threading.Thread(target=loop, kwargs={'key': key}, name='{}121'.format(key))
         threads.append(t)
 
     for t in threads:
