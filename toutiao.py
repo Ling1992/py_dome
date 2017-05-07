@@ -14,20 +14,19 @@ import threading
 
 sys.setdefaultencoding("utf-8")
 
-# key 专题 { time_sec 需保存的参数behot_time   for_times 最大循环次数  model 模式 }
+# key 专题 { behot_time 需保存的参数behot_time   for_times 最大循环次数  model 模式 }
 #       -->模式1 : behot_time 一直为0 ,模式2 : behot_time 取每次请求返回的值 , 模式3 : behot_time 每次时间戳减10 获取半年内数据
 
-model = 3
-for_times = 2
+model = 1
+for_times = 50
+category_content ={"behot_time": 0, "for_times": for_times, "model": model}
 category = {
-    # "news_tech": 0,
-    # "news_entertainment": 0,
-    # "news_sports": 0,
-    # "news_sports": 0,
-    "news_hot": {"time_sec": 0, "for_times": for_times, "model": model},
-    # "news_society": 0,
-    # "news_society": 0,
-    # "news_car": 0
+    "news_tech": category_content,
+    "news_entertainment": category_content,
+    "news_sports": category_content,
+    "news_hot": category_content,
+    "news_society": category_content,
+    "news_car": category_content,
 }
 
 apiurl = "http://www.toutiao.com/api/pc/feed/?category={0}&utm_source=toutiao&widen=1&max_behot_time={1}&max_behot_time_tmp=0&tadrequire=false&as=A175990077EECF2&cp=59078EBCCFF2DE1"
@@ -50,6 +49,9 @@ agent = [
     "Opera/9.80 (Macintosh; Intel Mac OS X 10.6.8; U; fr) Presto/2.9.168 Version/11.52"
     ]
 
+http = ['119.5.1.11:808', '119.113.189.198:8080', '218.86.128.57:8118', '61.157.198.66:8080', '119.5.1.42:808']
+https = ['112.193.91.55:80', '222.89.102.6:808', '119.48.181.236:8118', '119.96.203.368118', '115.202.162.65:808']
+
 
 def ttrequsts(url, **args):
     print url
@@ -58,6 +60,10 @@ def ttrequsts(url, **args):
         "Referfer": "www.toutiao.com",
         "User-Agent": random.choice(agent)
     }
+    proxies = {
+        'http': 'http://{}'.format(random.choice(http)),
+        'https': 'https://{}'.format(random.choice(https))
+    }
     print header['User-Agent']
     # 默认的是FileCookieJar没有实现save函数。
     # 而MozillaCookieJar或LWPCookieJar都已经实现了。
@@ -65,31 +71,56 @@ def ttrequsts(url, **args):
     # 实现，通过文件保存cookie。
     # 建议用LWPCookieJar，其保存的cookie，易于人类阅读
     session = requests.Session()
-    session.cookies = cookielib.LWPCookieJar(filename="cache/cookies2.txt")
+    session.cookies = cookielib.LWPCookieJar(filename="cache/toutiao_cookies.txt")
     try:
         # ignore_discard=True 忽略关闭浏览器丢失 , ignore_expires=True ,忽略失效  --load() 在文件中读取cookie
         session.cookies.load(ignore_discard=True)
     except:
         print u"failed load cookie"
+    time.sleep(3)  # 请求 时间 间隔
     try:
         response = session.get(url, headers=header, timeout=10, **args)
         session.cookies.save()
     except Exception as e:
         print e
         return None
-    print response.status_code, response.reason
     if response and response.status_code == 200:
         return response
+    print response.status_code, response.reason
 
 
-def start(name):
+def start():
     global category
-    print name
+    name = threading.current_thread().name
     current_time = None  # 模式3 专用 时间戳 递减 记录
     time_total = (365*24*60*60/2)  # 半年时间
+    time_total = 1 * 24 * 60 / 2   # 0.5天 时间
     time_sample = 10  # 时间间隔
-    # url = apiurl.format(str(int(time.time()))[:10])
+
+    if category[name]['model'] == 3:
+        category[name]['for_times'] = time_total
+    elif category[name]['model'] >= 4:
+        return False
+    elif category[name]['model'] <= 0:
+        return False
+
     while 1:
+
+        print 'model:', category[name]['model']
+        print 'for_times:', category[name]['for_times']
+        if category[name]['model'] >= 3:
+            if current_time is None:
+                current_time = int(time.time())
+            else:
+                current_time -= time_sample
+
+            behot_time = current_time
+        elif category[name]['model'] == 2:
+            behot_time = category[name]['behot_time']
+        else:
+            behot_time = 0
+
+        print 'be hot time :'.format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(behot_time)))
         # python从2.6开始支持format
         # data = {'first': 'Hodor', 'last': 'Hodor!'}
         # Old
@@ -99,24 +130,18 @@ def start(name):
         # Output
         # Hodor Hodor!
 
+        url = apiurl.format(name, behot_time)
 
-        # url = apiurl.format(ckey, category[ckey])
-        # url = apiurl1
-        # print "{0}==={1}".format(ckey, url)
-        # response = ttrequsts(url)
-        # session.cookies.save()
-        # if response is not None:
-        #     arclist = parselist(response)
-        #     if len(arclist) > 0:
-        #         crawlarc(arclist)
-        print 'model:', category[name]['model']
-        print 'for_times:', category[name]['for_times']
-        # if category[name]['model'] >= 3:
-        #     if current_time is None:
-        #         current_time = int(time.time())
-        #     else:
-        #         current_time -= time_sample
-        # print current_time
+        print "{0}==={1}".format(name, url)
+
+        response = ttrequsts(url)
+        if response is not None:
+            log('list_url : {}'.format(url))
+            log('list_request_code : {}, list_request_message : {}'.format(response.status_code, response.reason))
+            log('list_request_content : {}'.format(response.content))
+            arclist = parselist(response)
+            if len(arclist) > 0:
+                crawlarc(arclist)
 
         if category[name]['for_times'] <= 0:
             if category[name]['model'] >= 3:
@@ -124,60 +149,63 @@ def start(name):
             else:
                 category[name]['model'] += 1
                 if category[name]['model'] >= 3:
-                    category[name]['for_times'] = for_times  # time_total
+                    category[name]['for_times'] = time_total
                 else:
                     category[name]['for_times'] = for_times
         else:
             if category[name]['model'] >= 3:
-                category[name]['for_times'] -= 1  # time_sample
+                category[name]['for_times'] -= time_sample
             else:
                 category[name]['for_times'] -= 1
 
 
 def parselist(response):
-    with open('title_list_content.txt', 'w') as f:
-        f.write(response.content)
+    name = threading.current_thread().name
     json = response.json()
     print 'next>>>>>>>>>>>{0}'.format(json["next"]["max_behot_time"])
     global category
-    ckey = getTkey()
-    category[ckey] = json["next"]["max_behot_time"]
-    print 'list count origin :{}'.format(len(json["data"]))
+    category[name]['behot_time'] = json["next"]["max_behot_time"]
     arclist = [item for item in json["data"] if item["article_genre"] == "article" and item["source"] != u"头条问答"]
     return arclist
 
 
 def crawlarc(alist):
-    print "list count ---> {}".format(len(alist))
     for data in alist:
         item = {}
-        # print data["title"]
-        # print data["source_url"]
         import urlparse
         arcurl = urlparse.urljoin("http://www.toutiao.com", data["source_url"])
         arcres = ttrequsts(arcurl)
         if arcres is not None:
+            log('article_url : {}'.format(arcurl))
+            log('article_request_code : {}, article_request_message : {}'.format(arcres.status_code, arcres.reason))
+            log('article_request_content : {}'.format(arcres.content))
+
             item["title"] = data["title"]
             item["tag"] = data["tag"]
-            item["group_id"] = data["group_id"]
-            item["behot_time"] = data["behot_time"]
+            item["chinese_tag"] = data.get('chinese_tag')
             item["url"] = arcurl
-            # parseArc(arcres, item)
-            css = pq(arcres.text).make_links_absolute(arcres.url)
-            content = css.find(".article-content").html()
-            item["category"] = getTkey()
+            item["group_id"] = data["group_id"]
+            item["original_time"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(data["behot_time"]))
+
+            dom = pq(arcres.text).make_links_absolute(arcres.url)
+            content = dom.find(".article-content").html()
 
             if not content or not len(content):
-                content = css('article').html()
+                content = dom('article').html()
             if not content or not len(content):
-                content = css.find(".text").html()
+                content = dom.find(".text").html()
+            if not content or not len(content):
+                content = dom.find(".text").html()
             if not content or not len(content):
                 print 'content:{}'.format(repr(content))
                 if data["source"] == u"专题":
                     print '专题跳过'
                     continue
                 else:
-                    raise Exception('content is null !!')
+                    # raise Exception('content is null !!')
+                    print 'content is null 跳过 !! url:{}  content:{}  dom:{}'.format(arcurl, content, dom)
+                    log('content is null 跳过 !! url:{}  content:{}  dom:{}'.format(arcurl, content, dom), key_str='ling')
+                    continue
 
             item['content'] = content
             save(item)
@@ -185,6 +213,15 @@ def crawlarc(alist):
         else:
             print 'article respond is null !!'
             continue
+
+
+def log(content, key_str='default'):
+    with open('cache/{}_at_{}.log'.format(threading.current_thread().name, time.strftime("%Y-%m-%d", time.localtime(time.time()))), 'a') as f:
+        f.write('{} -->>'.format(key_str))
+        f.write('{}:\n'.format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))))
+        f.write('\t')
+        f.write(repr(content))
+        f.write('\n')
 
 
 def save(item):
@@ -199,24 +236,33 @@ def save(item):
             sql 操作
         """
         ling_con = MysqlLing()
-        count = ling_con.count("select * from article_list where group_id='%s'"
-                               % item.get('group_id'))
+        count = ling_con.count("select * from article_list where url='%s'"
+                               %
+                               item['url']
+                               )
         print count
         if count:
             print '数据 重复！！！'
-            res = False
         else:
             print '新增 数据 ！！！'
             res = ling_con.insert(
-                "insert into article_list(title, abstract, tag, group_id, original_time) VALUES ('%s', '%s', '%s', '%s', '%s')" % (
-                item.get('title'), item.get('abstract'), item.get('tag'), item.get('group_id'), item.get('behot_time')))
+                "insert into article_list(title, tag, chinese_tag, url, group_id, original_time) "
+                "VALUES "
+                "('%s', '%s', '%s', '%s', '%s', '%s')"
+                %
+                (item['title'], item['tag'], item['chinese_tag'], item['url'], item['group_id'], item['original_time'])
+            )
             print res
             if res:
                 pass
             else:
                 raise Exception('insert article_list error ')
-            res = ling_con.insert("INSERT INTO article(article_id, title, article) VALUES ('%s', '%s', '%s')" % (
-            item.get('group_id'), item.get('title'), item.get('content')))
+            res = ling_con.insert("INSERT INTO article(url, title, article) "
+                                  "VALUES "
+                                  "('%s', '%s', '%s')"
+                                  %
+                                  (item['url'], item['title'], item['content'])
+                                  )
             print res
             if res:
                 print 'insert article success !!'
@@ -233,7 +279,7 @@ if __name__ == "__main__":
 
     threads = []
     for _, v in category.iteritems():
-        tf = threading.Thread(target=start, name=_, kwargs={'name': _})
+        tf = threading.Thread(target=start, name=_)
         threads.append(tf)
 
     for t in threads:
