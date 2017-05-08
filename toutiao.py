@@ -1,25 +1,25 @@
 # -*- coding: utf-8 -*-
 
 import cookielib
-import sys
 import random
 import time
+import json
+import re
 import requests
-from pyquery import PyQuery as pq
-
-from base_class.ling_mysql import MysqlLing
-
-reload(sys)
 import threading
-
+import Queue
+from pyquery import PyQuery as pq
+from base_class.ling_mysql import MysqlLing
+import sys
+reload(sys)
 sys.setdefaultencoding("utf-8")
 
 # key 专题 { behot_time 需保存的参数behot_time   for_times 最大循环次数  model 模式 }
 #       -->模式1 : behot_time 一直为0 ,模式2 : behot_time 取每次请求返回的值 , 模式3 : behot_time 每次时间戳减10 获取半年内数据
 
-model = 1
-for_times = 50
-category_content ={"behot_time": 0, "for_times": for_times, "model": model}
+model = 3
+for_times = 60
+category_content ={"behot_time": 0, "for_times": for_times, "model": model, "over": False}
 category = {
     "news_tech": category_content,
     "news_entertainment": category_content,
@@ -28,6 +28,7 @@ category = {
     "news_society": category_content,
     "news_car": category_content,
 }
+q = Queue.Queue(128)
 
 apiurl = "http://www.toutiao.com/api/pc/feed/?category={0}&utm_source=toutiao&widen=1&max_behot_time={1}&max_behot_time_tmp=0&tadrequire=false&as=A175990077EECF2&cp=59078EBCCFF2DE1"
 agent = [
@@ -49,8 +50,9 @@ agent = [
     "Opera/9.80 (Macintosh; Intel Mac OS X 10.6.8; U; fr) Presto/2.9.168 Version/11.52"
     ]
 
-http = ['119.5.1.11:808', '119.113.189.198:8080', '218.86.128.57:8118', '61.157.198.66:8080', '119.5.1.42:808']
-https = ['112.193.91.55:80', '222.89.102.6:808', '119.48.181.236:8118', '119.96.203.368118', '115.202.162.65:808']
+http = ['119.5.1.13:808', '218.22.219.133:808', '183.78.183.156:82', '218.64.37.70:8118', '116.199.115.78:80']
+# https = ['112.193.91.55:80', '222.89.102.6:808', '119.48.181.236:8118', '119.96.203.368118', '115.202.162.65:808']
+regex = re.compile(r'^/api/')  # url = '/api/pc/subject/6417225587135349249/'
 
 
 def ttrequsts(url, **args):
@@ -61,8 +63,8 @@ def ttrequsts(url, **args):
         "User-Agent": random.choice(agent)
     }
     proxies = {
-        'http': 'http://{}'.format(random.choice(http)),
-        'https': 'https://{}'.format(random.choice(https))
+        'http': 'http://{}'.format(random.choice(http))
+        # 'https': 'https://{}'.format(random.choice(https))
     }
     print header['User-Agent']
     # 默认的是FileCookieJar没有实现save函数。
@@ -94,8 +96,8 @@ def start():
     name = threading.current_thread().name
     current_time = None  # 模式3 专用 时间戳 递减 记录
     time_total = (365*24*60*60/2)  # 半年时间
-    time_total = 1 * 24 * 60 / 2   # 0.5天 时间
-    time_sample = 10  # 时间间隔
+    # time_total = 1 * 24 * 60 / 2   # 0.5天 时间
+    time_sample = 60 * 5  # 时间间隔 秒
 
     if category[name]['model'] == 3:
         category[name]['for_times'] = time_total
@@ -120,7 +122,7 @@ def start():
         else:
             behot_time = 0
 
-        print 'be hot time :'.format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(behot_time)))
+        print 'be hot time :{}'.format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(behot_time)))
         # python从2.6开始支持format
         # data = {'first': 'Hodor', 'last': 'Hodor!'}
         # Old
@@ -129,6 +131,7 @@ def start():
         # '{first} {last}'.format(**data)
         # Output
         # Hodor Hodor!
+
 
         url = apiurl.format(name, behot_time)
 
@@ -145,6 +148,7 @@ def start():
 
         if category[name]['for_times'] <= 0:
             if category[name]['model'] >= 3:
+                category[name]['over'] = True
                 break
             else:
                 category[name]['model'] += 1
@@ -165,7 +169,10 @@ def parselist(response):
     print 'next>>>>>>>>>>>{0}'.format(json["next"]["max_behot_time"])
     global category
     category[name]['behot_time'] = json["next"]["max_behot_time"]
-    arclist = [item for item in json["data"] if item["article_genre"] == "article" and item["source"] != u"头条问答"]
+    arclist = [item for item in json["data"]
+               if item["article_genre"] == "article"
+               and item["source"] != u"头条问答"
+               and not regex.match(item['source_url'])]
     return arclist
 
 
@@ -180,14 +187,16 @@ def crawlarc(alist):
             log('article_request_code : {}, article_request_message : {}'.format(arcres.status_code, arcres.reason))
             log('article_request_content : {}'.format(arcres.content))
 
-            item["title"] = data["title"]
+            title, number = re.subn("'", "\\'", str(data["title"]))  # 解决 单引号 插入数据库 出错问题
+            item["title"] = title
             item["tag"] = data["tag"]
             item["chinese_tag"] = data.get('chinese_tag')
             item["url"] = arcurl
             item["group_id"] = data["group_id"]
             item["original_time"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(data["behot_time"]))
 
-            dom = pq(arcres.text).make_links_absolute(arcres.url)
+            text = unicode(arcres.content, encoding='utf-8')  # 解决乱码问题
+            dom = pq(text).make_links_absolute(arcres.url)
             content = dom.find(".article-content").html()
 
             if not content or not len(content):
@@ -195,7 +204,7 @@ def crawlarc(alist):
             if not content or not len(content):
                 content = dom.find(".text").html()
             if not content or not len(content):
-                content = dom.find(".text").html()
+                content = dom.find(".contentMain").html()
             if not content or not len(content):
                 print 'content:{}'.format(repr(content))
                 if data["source"] == u"专题":
@@ -206,10 +215,10 @@ def crawlarc(alist):
                     print 'content is null 跳过 !! url:{}  content:{}  dom:{}'.format(arcurl, content, dom)
                     log('content is null 跳过 !! url:{}  content:{}  dom:{}'.format(arcurl, content, dom), key_str='ling')
                     continue
-
+            content, number = re.subn("\r", "\n", str(content))  # 解决 \r 插入数据库 值为空的问题
+            content, number = re.subn("'", "\\'", str(content))  # 解决 单引号 插入数据库 出错问题
             item['content'] = content
-            save(item)
-
+            q.put(item)
         else:
             print 'article respond is null !!'
             continue
@@ -220,12 +229,28 @@ def log(content, key_str='default'):
         f.write('{} -->>'.format(key_str))
         f.write('{}:\n'.format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))))
         f.write('\t')
-        f.write(repr(content))
+        # f.write(repr(content))
+        f.write(json.dumps(content, ensure_ascii=False, encoding='utf-8'))
         f.write('\n')
+
+
+def q_work():
+    is_over = True
+
+    while is_over:
+        item = q.get()
+        save(item)
+
+        for (key, value) in category.iteritems():
+            is_over = value['over'] and is_over
+        is_over = not is_over
+        pass
+    print 'queue is over'
 
 
 def save(item):
     print "\n{0}--thread is working>>>>>>>>>>>>>>>>>>>>>\n".format(threading.currentThread().getName())
+    log(item, 'ling')
     try:
         # import json
         # css = pq(response.text).make_links_absolute(response.url)
@@ -278,6 +303,10 @@ def save(item):
 if __name__ == "__main__":
 
     threads = []
+    # 队列
+    tf = threading.Thread(target=q_work, name='queue')
+    threads.append(tf)
+
     for _, v in category.iteritems():
         tf = threading.Thread(target=start, name=_)
         threads.append(tf)
@@ -287,5 +316,5 @@ if __name__ == "__main__":
     for t in threads:
         t.join()
 
-
+    print 'game over'
 
