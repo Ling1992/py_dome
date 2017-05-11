@@ -15,18 +15,33 @@ reload(sys)
 sys.setdefaultencoding("utf-8")
 
 # key 专题 { behot_time 需保存的参数behot_time   for_times 最大循环次数  model 模式 }
-#       -->模式1 : behot_time 一直为0 ,模式2 : behot_time 取每次请求返回的值 , 模式3 : behot_time 每次时间戳减10 获取半年内数据
+#       -->模式1 : behot_time 一直为0 ,模式2 : behot_time 取每次请求返回的值 ,
+#       模式3 behot_time 每次时间戳减10*60s 获取最近两天数据 模式4 : behot_time 每次时间戳减5*60s 获取历史两天数据
 
-model = 3
+model = 1
 for_times = 60
 category_content ={"behot_time": 0, "for_times": for_times, "model": model, "over": False}
 category = {
-    "news_tech": category_content,
-    "news_entertainment": category_content,
-    "news_sports": category_content,
-    "news_hot": category_content,
-    "news_society": category_content,
-    "news_car": category_content,
+    "news_tech": category_content,  # 科技
+    "news_entertainment": category_content,  # 娱乐
+    "news_sports": category_content,  # 体育
+    "news_hot": category_content,  # 热点
+    "news_society": category_content,  # 社会
+    "news_car": category_content,  # 汽车
+    "news_finance": category_content,  # 财经
+    "funny": category_content,  # 搞笑
+    "news_military": category_content,  # 军事
+    "news_fashion": category_content,  # 时尚
+    "news_discovery": category_content,  # 探索
+    "news_regimen": category_content,  # 养生
+    "news_essay": category_content,  # 美文
+    "news_history": category_content,  # 历史
+    "news_world": category_content,  # 国际
+    "news_travel": category_content,  # 旅游
+    "news_baby": category_content,  # 育儿
+    "news_story": category_content,  # 故事
+    "news_game": category_content,  # 游戏
+    "news_food": category_content,  # 美食
 }
 q = Queue.Queue(128)
 
@@ -56,7 +71,8 @@ regex = re.compile(r'^/api/')  # url = '/api/pc/subject/6417225587135349249/'
 
 
 def ttrequsts(url, **args):
-    print url
+    name = threading.current_thread().name
+    print 'category:{} url:{}'.format(name, url)
     header = {
         # "HOST": "www.toutiao.com", # 解决 301 重定向问题
         "Referfer": "www.toutiao.com",
@@ -73,13 +89,13 @@ def ttrequsts(url, **args):
     # 实现，通过文件保存cookie。
     # 建议用LWPCookieJar，其保存的cookie，易于人类阅读
     session = requests.Session()
-    session.cookies = cookielib.LWPCookieJar(filename="cache/toutiao_cookies.txt")
+    session.cookies = cookielib.LWPCookieJar(filename="cache/toutiao_{}_cookies.txt".format(name))
     try:
         # ignore_discard=True 忽略关闭浏览器丢失 , ignore_expires=True ,忽略失效  --load() 在文件中读取cookie
         session.cookies.load(ignore_discard=True)
     except:
         print u"failed load cookie"
-    time.sleep(3)  # 请求 时间 间隔
+    time.sleep(6)  # 请求 时间 间隔
     try:
         response = session.get(url, headers=header, timeout=10, **args)
         session.cookies.save()
@@ -95,9 +111,9 @@ def start():
     global category
     name = threading.current_thread().name
     current_time = None  # 模式3 专用 时间戳 递减 记录
-    time_total = (365*24*60*60/2)  # 半年时间
-    # time_total = 1 * 24 * 60 / 2   # 0.5天 时间
-    time_sample = 60 * 5  # 时间间隔 秒
+    # time_total = (365*24*60*60/2)  # 半年时间
+    time_total = 2 * 24 * 60 * 60    # 时间
+    time_sample = {3: 60 * 10, 4: 60 * 5}   # 模式3 10分钟 模式4 5分钟时间间隔 秒
 
     if category[name]['model'] == 3:
         category[name]['for_times'] = time_total
@@ -112,9 +128,19 @@ def start():
         print 'for_times:', category[name]['for_times']
         if category[name]['model'] >= 3:
             if current_time is None:
-                current_time = int(time.time())
+                if category[name]['model'] == 3:
+                    current_time = int(time.time())
+                else:
+                    with open('history_time.txt', 'r') as f:
+                        history_time = f.read()
+                    if history_time:
+                        current_time = int(time.mktime(time.strptime(history_time, "%Y-%m-%d %H:%M:%S")))  # 2017-05-08 00:00:00
+                        with open('history_time.txt', 'w') as f:
+                            f.write(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(current_time - 60 * 60 * 24 * 2)))
+                    else:
+                        break
             else:
-                current_time -= time_sample
+                current_time -= time_sample[category[name]['model']]
 
             behot_time = current_time
         elif category[name]['model'] == 2:
@@ -122,7 +148,7 @@ def start():
         else:
             behot_time = 0
 
-        print 'be hot time :{}'.format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(behot_time)))
+        print '线程: {} ;be hot time :{}'.format(name, time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(behot_time)))
         # python从2.6开始支持format
         # data = {'first': 'Hodor', 'last': 'Hodor!'}
         # Old
@@ -132,10 +158,9 @@ def start():
         # Output
         # Hodor Hodor!
 
-
         url = apiurl.format(name, behot_time)
 
-        print "{0}==={1}".format(name, url)
+        # print "{0}==={1}".format(name, url)
 
         response = ttrequsts(url)
         if response is not None:
@@ -147,21 +172,22 @@ def start():
                 crawlarc(arclist)
 
         if category[name]['for_times'] <= 0:
-            if category[name]['model'] >= 3:
-                category[name]['over'] = True
+            if category[name]['model'] >= 4:
                 break
             else:
                 category[name]['model'] += 1
+                current_time = None
                 if category[name]['model'] >= 3:
                     category[name]['for_times'] = time_total
                 else:
                     category[name]['for_times'] = for_times
         else:
             if category[name]['model'] >= 3:
-                category[name]['for_times'] -= time_sample
+                category[name]['for_times'] -= time_sample[category[name]['model']]
             else:
                 category[name]['for_times'] -= 1
 
+    category[name]['over'] = True
 
 def parselist(response):
     name = threading.current_thread().name
@@ -185,7 +211,6 @@ def crawlarc(alist):
         if arcres is not None:
             log('article_url : {}'.format(arcurl))
             log('article_request_code : {}, article_request_message : {}'.format(arcres.status_code, arcres.reason))
-            log('article_request_content : {}'.format(arcres.content))
 
             title, number = re.subn("'", "\\'", str(data["title"]))  # 解决 单引号 插入数据库 出错问题
             item["title"] = title
@@ -237,7 +262,7 @@ def log(content, key_str='default'):
 def q_work():
     is_over = True
 
-    while is_over:
+    while is_over or q.qsize() >= 1:
         item = q.get()
         save(item)
 
@@ -245,12 +270,14 @@ def q_work():
             is_over = value['over'] and is_over
         is_over = not is_over
         pass
+    print 'queue size: ', q.qsize()
+    for (key, value) in category.iteritems():
+        print 'category:{} , is_over:{}'.format(key, value['over'])
     print 'queue is over'
 
 
 def save(item):
     print "\n{0}--thread is working>>>>>>>>>>>>>>>>>>>>>\n".format(threading.currentThread().getName())
-    log(item, 'ling')
     try:
         # import json
         # css = pq(response.text).make_links_absolute(response.url)

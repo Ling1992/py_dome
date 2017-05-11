@@ -6,32 +6,21 @@ import requests
 import re
 import time
 import random
+import json
+from pyquery import PyQuery as pq
+from base_class.ling_mysql import MysqlLing
+import sys
+reload(sys)
+sys.setdefaultencoding("utf8")
 
 
 def loop(loops, **kwargs):
     print 'sec:', kwargs['index']
-    print 'loops : ', loops, 'sec:', ctime(), 'kwargs:', repr(kwargs)
+    print 'loops : ', loops, 'sec:', ctime(), 'kwargs:', json.dumps("", ensure_ascii=False, encoding='utf-8')
     sleep(kwargs['index'])
     print 'loops : ', loops, 'sec:', ctime(), 'current thread name:', threading.current_thread().name
     test(loops, kwargs)
     log(kwargs)
-    # 抓取代理IP
-    ip_totle = []  # 所有页面的内容列表
-    for page in range(2, 6):
-        url = 'http://ip84.com/dlgn/' + str(page)
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64)"}
-        response = requests.get(url, headers=headers)
-        content = response.content
-        print('get page', page)
-        pattern = re.compile('<td>(\d.*?)</td>')  # 截取<td>与</td>之间第一个数为数字的内容
-        ip_page = re.findall(pattern, str(content))
-        ip_totle.extend(ip_page)
-        time.sleep(random.choice(range(1, 3)))
-    # 打印抓取内容
-    print('代理IP地址     ', '\t', '端口', '\t', '速度', '\t', '验证时间')
-    for i in range(0, len(ip_totle), 4):
-        print(ip_totle[i], '    ', '\t', ip_totle[i + 1], '\t', ip_totle[i + 2], '\t', ip_totle[i + 3])
-
 
 
 def test(loops, arg):
@@ -50,18 +39,13 @@ def log(content, key_str='default'):
 
 
 if __name__ == '__main__':
-    category = {'new': {'name': '新闻', 'index': 2}, 'sport': {'name': '运动', 'index': 8}}
+    with open('history_time.txt', 'r') as f:
+        a = f.read()
+    print a
+    history_time_sec = int(time.mktime(time.strptime(a, "%Y-%m-%d %H:%M:%S")))
 
-    threads = []
+    print time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(history_time_sec - 60 * 60 * 24 * 2))
 
-    for key in category:
-        print key, category[key]['index'], category[key]['name']
-        t = threading.Thread(target=loop, kwargs={'loops': key, 'index': category[key]['index'], 'name': category[key]['name']}, name='{}121'.format(key))
-        threads.append(t)
 
-    for t in threads:
-        t.start()
 
-    for t in threads:
-        t.join()
 
