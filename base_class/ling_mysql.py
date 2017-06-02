@@ -20,7 +20,7 @@ class MysqlLing(object):
         return cls.__instance
 
     def insert(self, sql_str):
-        # print sql_str
+        print sql_str
         try:
             self.cursor.execute(sql_str)
             # insert_id = self.db.insert_id()
