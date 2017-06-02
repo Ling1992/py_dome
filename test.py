@@ -3,12 +3,15 @@ import threading
 from time import ctime, sleep
 import time
 import requests
+import cookielib
 import re
 import time
 import random
 import json
+import demjson
 from pyquery import PyQuery as pq
 from base_class.ling_mysql import MysqlLing
+import json
 import sys
 reload(sys)
 sys.setdefaultencoding("utf8")
@@ -39,13 +42,13 @@ def log(content, key_str='default'):
 
 
 if __name__ == '__main__':
-    with open('history_time.txt', 'r') as f:
-        a = f.read()
-    print a
-    history_time_sec = int(time.mktime(time.strptime(a, "%Y-%m-%d %H:%M:%S")))
-
-    print time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(history_time_sec - 60 * 60 * 24 * 2))
-
-
-
+    ling_con = MysqlLing()
+    author_list = ling_con.search("select * from author_list")
+    with open('author1.txt', 'w') as f:
+        for author in author_list:
+            if author_list.index(author) == 0:
+                pass
+            else:
+                f.write("\n")
+            f.write(str(author['id']))
 

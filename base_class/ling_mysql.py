@@ -14,13 +14,13 @@ class MysqlLing(object):
     def __new__(cls, *args, **kwargs):
         if not cls.__instance:
             cls.__instance = super(MysqlLing, cls).__new__(cls, *args, **kwargs)
-            cls.db = MySQLdb.connect("localhost", "root", "root", "ling_python_test1", charset="utf8")
+            cls.db = MySQLdb.connect("localhost", "root", "root", "ling_python_test2", charset="utf8")
             cls.cursor = cls.db.cursor()
             print 'MysqlLing __new__ '
         return cls.__instance
 
     def insert(self, sql_str):
-        # print sql_str
+        print sql_str
         try:
             self.cursor.execute(sql_str)
             # insert_id = self.db.insert_id()
@@ -36,6 +36,24 @@ class MysqlLing(object):
     def count(self, sql_str):
         count = self.cursor.execute(sql_str)
         return count
+
+    def search(self, sql_str):
+        print sql_str
+        data = []
+        try:
+            self.cursor.execute(sql_str)
+            results = self.cursor.fetchall()
+            for row in results:
+                author_id = row[0]
+                name = row[1]
+                media_id = row[2]
+                fensi = row[3]
+                guanzhu = row[4]
+                author_type = row[5]
+                data.append({'id': author_id, 'name': name, 'media_id': media_id, 'fensi': fensi, 'guanzhu': guanzhu, 'type': author_type})
+        except Exception, e:
+            print e
+        return data
 
     def __del__(self):
         self.cursor.close()
