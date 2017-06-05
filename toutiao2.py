@@ -39,7 +39,7 @@ agent = [
 # 从 .txt 中获取 作者 id
 def init_author_id():
     author_ids = []
-    with open('author.txt', 'r') as f:
+    with open('author1.txt', 'r') as f:
         for line in f.readlines():
             author_ids.append(line.replace("\n", ''))
 
@@ -235,6 +235,12 @@ def get_article(item):
 
             if not content or not len(content):
                 content = dom.find('.f14').html()
+
+            if not content or not len(content):
+                content = dom.find('.m-detail-bd').html()
+
+            if not content or not len(content):
+                content = dom.find('.artical-content').html()
 
             if content:
                 content, number = re.subn("\r", "\n", str(content))  # 解决 \r 插入数据库 值为空的问题
