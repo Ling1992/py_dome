@@ -129,6 +129,8 @@ if __name__ == '__main__':
             user2 = demjson.decode(content)
             user = dict(user1.items() + user2.items())
             save(user)
+            print time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+            print user_id
             with open('get_user_id.txt', 'w') as f:
                 f.write(str(user_id))
             # print user

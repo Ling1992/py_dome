@@ -22,26 +22,26 @@ model = 1
 for_times = 60
 category_content ={"behot_time": 0, "for_times": for_times, "model": model, "over": False}
 category = {
-    "news_tech": category_content,  # 科技
-    "news_entertainment": category_content,  # 娱乐
-    "news_sports": category_content,  # 体育
+    # "news_tech": category_content,  # 科技
+    # "news_entertainment": category_content,  # 娱乐
+    # "news_sports": category_content,  # 体育
     "news_hot": category_content,  # 热点
-    "news_society": category_content,  # 社会
-    "news_car": category_content,  # 汽车
-    "news_finance": category_content,  # 财经
-    "funny": category_content,  # 搞笑
-    "news_military": category_content,  # 军事
-    "news_fashion": category_content,  # 时尚
-    "news_discovery": category_content,  # 探索
-    "news_regimen": category_content,  # 养生
-    "news_essay": category_content,  # 美文
-    "news_history": category_content,  # 历史
-    "news_world": category_content,  # 国际
-    "news_travel": category_content,  # 旅游
-    "news_baby": category_content,  # 育儿
-    "news_story": category_content,  # 故事
-    "news_game": category_content,  # 游戏
-    "news_food": category_content,  # 美食
+    # "news_society": category_content,  # 社会
+    # "news_car": category_content,  # 汽车
+    # "news_finance": category_content,  # 财经
+    # "funny": category_content,  # 搞笑
+    # "news_military": category_content,  # 军事
+    # "news_fashion": category_content,  # 时尚
+    # "news_discovery": category_content,  # 探索
+    # "news_regimen": category_content,  # 养生
+    # "news_essay": category_content,  # 美文
+    # "news_history": category_content,  # 历史
+    # "news_world": category_content,  # 国际
+    # "news_travel": category_content,  # 旅游
+    # "news_baby": category_content,  # 育儿
+    # "news_story": category_content,  # 故事
+    # "news_game": category_content,  # 游戏
+    # "news_food": category_content,  # 美食
 }
 q = Queue.Queue(128)
 
@@ -68,6 +68,7 @@ agent = [
 http = ['119.5.1.13:808', '218.22.219.133:808', '183.78.183.156:82', '218.64.37.70:8118', '116.199.115.78:80']
 # https = ['112.193.91.55:80', '222.89.102.6:808', '119.48.181.236:8118', '119.96.203.368118', '115.202.162.65:808']
 regex = re.compile(r'^/api/')  # url = '/api/pc/subject/6417225587135349249/'
+reg = re.compile(r'[0-9]+')  # "media_url": "/c/user/5739097906/",
 
 
 def ttrequsts(url, **args):
@@ -219,6 +220,11 @@ def crawlarc(alist):
             item["url"] = arcurl
             item["group_id"] = data["group_id"]
             item["original_time"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(data["behot_time"]))
+            m = reg.search(data.get('media_url'))
+            if m:
+                item['author_id'] = m.group()
+            else:
+                item['author_id'] = 46543
 
             text = unicode(arcres.content, encoding='utf-8')  # 解决乱码问题
             dom = pq(text).make_links_absolute(arcres.url)
@@ -288,6 +294,7 @@ def save(item):
             sql 操作
         """
         ling_con = MysqlLing()
+        """
         count = ling_con.count("select * from article_list where url='%s'"
                                %
                                item['url']
@@ -322,6 +329,18 @@ def save(item):
                 raise Exception('insert article error ')
 
         print "\n"
+        """
+        count = ling_con.count("select * from author_list where id='%s'"
+                               %
+                               item['author_id']
+                               )
+        if count:
+            pass
+        else:
+            print 'insert author_list'
+            ling_con.insert(
+                "insert into author_list(id) VALUES ('%s')" % (item['author_id'])
+            )
     except Exception as e:
         print e
         pass

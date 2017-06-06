@@ -42,13 +42,14 @@ def log(content, key_str='default'):
 
 
 if __name__ == '__main__':
-    ling_con = MysqlLing()
-    author_list = ling_con.search("select * from author_list")
-    with open('author1.txt', 'w') as f:
-        for author in author_list:
-            if author_list.index(author) == 0:
-                pass
-            else:
-                f.write("\n")
-            f.write(str(author['id']))
+    # "media_url": "/c/user/5739097906/",
+    url = "/c/user//"
+    reg = re.compile(r'[0-9]+')
+    m = reg.search(url)
+
+    # if m:
+    print m.group()
+    # else:
+    #     print 'not search'
+    pass
 

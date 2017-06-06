@@ -37,9 +37,9 @@ def update(item):
         """
         ling_con = MysqlLing()
         ling_con.insert(
-            "UPDATE author_list SET media_id='%s', fensi='%s', guanzhu='%s', type='%s' where id='%s' "
+            "UPDATE author_list SET name='%s', media_id='%s', fensi='%s', guanzhu='%s', type='%s' where id='%s' "
             %
-            (item['mediaId'], item['fensi'], item['guanzhu'], item['type'], item['id'])
+            (item['name'], item['mediaId'], item['fensi'], item['guanzhu'], item['type'], item['id'])
         )
     except Exception as e:
         print e
