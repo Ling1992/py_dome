@@ -51,9 +51,8 @@ do
         python create_author.py  &&
         python toutiao2.py  &&
         deactivate  &&
-
-
-       echo '任务结束: '`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_run.log'
+        echo '任务结束: '`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_run.log' &&
+        echo "\n" >>$shlogdir`date +%Y-%m-%d`'_run.log' &&
         break
     fi
 done

@@ -59,7 +59,8 @@ source $envpath'activate'  &&
 python /Users/ling/PycharmProjects/py_dome/toutiao.py  &&
 deactivate  &&
 
-echo '任务结束: '`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_run.log'
+echo '任务结束: '`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_run.log' &&
+echo "\n" >> $shlogdir`date +%Y-%m-%d`'_run.log'
 
 ## 每小时 执行 spider Python
 # 0 */1 * * * /bin/sh /Users/ling/PycharmProjects/py_dome/toutiao.sh >/dev/null 2>&1

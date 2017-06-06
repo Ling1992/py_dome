@@ -97,6 +97,7 @@ if __name__ == '__main__':
     with open('get_user_id.txt', 'r') as f:
         user_id = int(f.read())
     print user_id
+    index = 0
     while 1:
         header = {
             "Host": "www.toutiao.com",
@@ -137,5 +138,7 @@ if __name__ == '__main__':
         else:
             continue
         time.sleep(0.5)
-
+        index += 1
+        if index > 1000:
+            break
 

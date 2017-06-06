@@ -45,12 +45,13 @@ do
     else
         echo 'start'
 
-        envpath='/Users/ling/.test1vem/bin/'
+        envpath='/Users/ling/.test1vem/bin/'  &&
         source $envpath'activate'  &&
         python get_user.py  &&
         deactivate  &&
+        echo '任务结束: '`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_run.log' &&
+        echo "\n" >>$shlogdir`date +%Y-%m-%d`'_run.log' &&
 
-       echo '任务结束: '`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_run.log'
         break
     fi
 done
