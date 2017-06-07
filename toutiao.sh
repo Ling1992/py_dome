@@ -19,7 +19,7 @@ endTimeStamp=`date -j -f '%Y-%m-%d %H:%M:%S' "$endTime" +%s`
 
 currentTimeStamp=`date +%s`
 
-if [ $currentTimeStamp -ge $startTimeStamp ] || [ $currentTimeStamp -lt $endTimeStamp ] ; then
+if [ $currentTimeStamp -ge $startTimeStamp ] && [ $currentTimeStamp -lt $endTimeStamp ] ; then
     echo '6点到 晚上11点 不进行任务:'`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_run.log'
     exit
 fi
