@@ -3,11 +3,9 @@ import cookielib
 import random
 import time
 import json
-import re
 import requests
 import threading
 import Queue
-from pyquery import PyQuery as pq
 import os
 import sys
 reload(sys)
@@ -33,12 +31,14 @@ class LingSpider(object):
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_3) AppleWebKit/535.20 (KHTML, like Gecko) Chrome/19.0.1036.7 Safari/535.20",
         "Opera/9.80 (Macintosh; Intel Mac OS X 10.6.8; U; fr) Presto/2.9.168 Version/11.52"
     ]
+    threads = []
 
     def __init__(self, pid_file_name):
         (name, ext) = os.path.splitext(pid_file_name)
         self.pid_file_name = name
         self.pid_file_path = None
         self.project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        self.q = Queue.Queue(128)
 
     def create_pid_file(self):
         self.pid_file_path = '{0}/cache/{1}.pid'.format(self.project_path, self.pid_file_name)
@@ -51,41 +51,60 @@ class LingSpider(object):
             pass
 
     def run(self):
+        print u'run'
         self.create_pid_file()
+        th = []
 
-        threads = []
-        # 队列
-        tf = threading.Thread(target=q_work, name='queue')
-        threads.append(tf)
+        for name in self.threads:
+            tf = threading.Thread(target=LingSpider.__start, args=(self,), name=name)
+            th.append(tf)
 
-        for _, v in category.iteritems():
-            tf = threading.Thread(target=self.start(), name=_)
-            threads.append(tf)
+        t = threading.Thread(target=LingSpider.queue_work, args=(self,), name='queue')
+        th.append(t)
 
-        for t in threads:
+        for t in th:
             t.start()
-        for t in threads:
+        for t in th:
             t.join()
 
         print 'game over'
-        self.del_pid_file()
+        if os.path.isfile(self.pid_file_path):
+            self.del_pid_file()
 
-    def start(self):
+    def __start(self):
         while os.path.isfile(self.pid_file_path):
-            self.spider()
+            res = self.spider()
+            if res is False:
+                break
 
     def spider(self):
         print 'spider'
 
-    def ling_request(self, url):
+    def queue_work(self):
+        print u'queue_work'
+        # del pid 强制结束
+        while os.path.isfile(self.pid_file_path) and threading.active_count() > 2:
+            print threading.active_count()
+            if self.q.qsize() >= 1:
+                item = self.q.get()
+                res = self.save(item)
+                print res
+            else:
+                print u'no item sleep 3s'
+                time.sleep(3)
+        print threading.active_count()
+        print 'queue is over'
+
+    def save(self, item):
+        print u'save'
+        print item
+        return {}
+
+    def ling_request(self, url, header=None):
         name = threading.current_thread().name
-
-        header = {
-            "Referfer": "www.toutiao.com",
-            "User-Agent": random.choice(self.agent),
-        }
+        if header is not None:
+            header['User-Agent'] = random.choice(self.agent)
         print 'threading:{} url:{} User-Agent:{}'.format(name, url, header['User-Agent'])
-
         session = requests.Session()
         session.cookies = cookielib.LWPCookieJar(filename="{}/cache/{}/{}_cookies.txt".format(self.project_path, self.pid_file_name, name))
         res = {}
@@ -96,17 +115,31 @@ class LingSpider(object):
             session.cookies.load(ignore_discard=True)
         except Exception, e:
             print u"failed load cookie !! Exception:{}".format(e.message)
-
         try:
             response = session.get(url, headers=header, timeout=5)
             session.cookies.save()
+            res['status_code'] = response.status_code
+            res['reason'] = response.reason
         except Exception as e:
-            print e
+            res['status_code'] = 110
+            res['reason'] = e.message
+            self.log(res, 'ling')
 
-        time.sleep(6)  # 请求 时间 间隔
+        time.sleep(len(self.threads) * 0.35)  # 多线程 请求 延时 时间 间隔
         return res, response
 
+    def log(self, content, key_str='default'):
+        name = threading.current_thread().name
+        now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+        with open("{}/cache/{}/{}_{}.log".format(self.project_path, self.pid_file_name, now, name), 'a') as f:
+            f.write('{} -->>'.format(key_str))
+            f.write('{}:\n'.format(now))
+            f.write('\t')
+            f.write(json.dumps(content, ensure_ascii=False, encoding='utf-8'))
+            f.write('\n')
+
     def __del__(self):
-        self.del_pid_file()
+        if os.path.isfile(self.pid_file_path):
+            self.del_pid_file()
 
     pass
