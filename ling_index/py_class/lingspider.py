@@ -72,10 +72,14 @@ class LingSpider(object):
             self.del_pid_file()
 
     def __start(self):
+        self.init()
         while os.path.isfile(self.pid_file_path):
             res = self.spider()
             if res is False:
                 break
+
+    def init(self):
+        pass
 
     def spider(self):
         print 'spider'
@@ -102,6 +106,7 @@ class LingSpider(object):
 
     def ling_request(self, url, header=None):
         name = threading.current_thread().name
+        self.log(url)
         if header is not None:
             header['User-Agent'] = random.choice(self.agent)
         print 'threading:{} url:{} User-Agent:{}'.format(name, url, header['User-Agent'])
@@ -123,7 +128,8 @@ class LingSpider(object):
         except Exception as e:
             res['status_code'] = 110
             res['reason'] = e.message
-            self.log(res, 'ling')
+        self.log(res, 'ling')
+        # self.log(response, 'ling')
 
         time.sleep(len(self.threads) * 0.35)  # 多线程 请求 延时 时间 间隔
         return res, response
@@ -131,7 +137,11 @@ class LingSpider(object):
     def log(self, content, key_str='default'):
         name = threading.current_thread().name
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-        with open("{}/cache/{}/{}_{}.log".format(self.project_path, self.pid_file_name, now, name), 'a') as f:
+        log_path = "{}/cache/{}".format(self.project_path, self.pid_file_name)
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+
+        with open("{}/{}_{}.log".format(log_path, time.strftime("%Y-%m-%d", time.localtime(time.time())), name), 'a') as f:
             f.write('{} -->>'.format(key_str))
             f.write('{}:\n'.format(now))
             f.write('\t')
