@@ -40,6 +40,7 @@ class LingSpider(object):
         self.project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         self.q = Queue.Queue(128)
 
+    # pid 文件处理
     def create_pid_file(self):
         self.pid_file_path = '{0}/cache/{1}.pid'.format(self.project_path, self.pid_file_name)
         with open('{0}/cache/{1}.pid'.format(self.project_path, self.pid_file_name), 'w') as f:
@@ -77,8 +78,12 @@ class LingSpider(object):
             res = self.spider()
             if res is False:
                 break
+        self.end()
 
     def init(self):
+        pass
+
+    def end(self):
         pass
 
     def spider(self):
@@ -88,28 +93,27 @@ class LingSpider(object):
         print u'queue_work'
         # del pid 强制结束
         while os.path.isfile(self.pid_file_path) and threading.active_count() > 2:
-            print threading.active_count()
+            print u"当前线程数：", threading.active_count()
             if self.q.qsize() >= 1:
                 item = self.q.get()
                 res = self.save(item)
-                print res
+                print u"save response:", res
             else:
                 print u'no item sleep 3s'
                 time.sleep(3)
-        print threading.active_count()
+        print u"当前线程数：", threading.active_count()
         print 'queue is over'
 
     def save(self, item):
         print u'save'
-        print item
+        print u"save --> item:", item
         return {}
 
-    def ling_request(self, url, header=None):
+    def ling_request(self, url, header={}):
         name = threading.current_thread().name
         self.log(url)
-        if header is not None:
-            header['User-Agent'] = random.choice(self.agent)
-        print 'threading:{} url:{} User-Agent:{}'.format(name, url, header['User-Agent'])
+        header['User-Agent'] = random.choice(self.agent)
+        print 'threading:{} url:{} User-Agent:{}'.format(name, url, header.get('User-Agent'))
         session = requests.Session()
         session.cookies = cookielib.LWPCookieJar(filename="{}/cache/{}/{}_cookies.txt".format(self.project_path, self.pid_file_name, name))
         res = {}
@@ -121,24 +125,27 @@ class LingSpider(object):
         except Exception, e:
             print u"failed load cookie !! Exception:{}".format(e.message)
         try:
-            response = session.get(url, headers=header, timeout=5)
+            response = session.get(url, headers=header, timeout=61)
             session.cookies.save()
             res['status_code'] = response.status_code
             res['reason'] = response.reason
         except Exception as e:
             res['status_code'] = 110
-            res['reason'] = e.message
+            res['reason'] = u"e.message->{}".format(e.message)
+            res['url'] = url
+        print res
         self.log(res, 'ling')
-        # self.log(response, 'ling')
 
         time.sleep(len(self.threads) * 0.35)  # 多线程 请求 延时 时间 间隔
         return res, response
 
+    # 日志 记录
     def log(self, content, key_str='default'):
         name = threading.current_thread().name
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
         log_path = "{}/cache/{}".format(self.project_path, self.pid_file_name)
         if not os.path.exists(log_path):
+            print 'yes', os.path.exists(log_path)
             os.makedirs(log_path)
 
         with open("{}/{}_{}.log".format(log_path, time.strftime("%Y-%m-%d", time.localtime(time.time())), name), 'a') as f:
