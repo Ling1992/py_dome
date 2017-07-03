@@ -128,9 +128,7 @@ class TouTiaoSpiderOne(LingSpider):
         # 文章获取
         if arclist and len(arclist) >= 1:
             for data in arclist:
-                res = self.get_article(data)
-                if res is not True:
-                    return res
+                self.get_article(data)
 
     def save(self, item):
         res = self.__ling_post(u"http://localhost:8082/addArticle", item)
