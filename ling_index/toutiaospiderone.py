@@ -4,59 +4,53 @@ import re
 import os
 import time
 import threading
+import requests
+import json
 from pyquery import PyQuery as pq
 
 
-class TouTiaoSpider(LingSpider):
+class TouTiaoSpiderOne(LingSpider):
     threads = [
-        "news_hot",
-        "news_tech"
+        "news_hot",                 # 热点
+        "news_society",             # 社会
+        "news_entertainment",       # 娱乐
+        "news_tech",                # 科技
+        "news_sports",              # 体育
+        "news_car",                 # 汽车
+        "news_finance",             # 财经
+        "funny",                    # 搞笑
+        "news_military",            # 军事
+        "news_fashion",             # 时尚
+        "news_discovery",           # 探索
+        "news_regimen",             # 养生
+        "news_essay",               # 美文
+        "news_history",             # 历史
+        "news_world",               # 国际
+        "news_travel",              # 旅游
+        "news_baby",                # 育儿
+        "news_story",               # 故事
+        "news_game",                # 游戏
+        "news_food"                 # 美食
     ]
-
-    # "news_hot": category_content,  # 热点
-    # "news_society": category_content,  # 社会
-    # "news_entertainment": category_content,  # 娱乐
-    # "news_tech": category_content,  # 科技
-    # "news_sports": category_content,  # 体育
-    # "news_car": category_content,  # 汽车
-    # "news_finance": category_content,  # 财经
-    # "funny": category_content,  # 搞笑
-    # "news_military": category_content,  # 军事
-    # "news_fashion": category_content,  # 时尚
-    # "news_discovery": category_content,  # 探索
-    # "news_regimen": category_content,  # 养生
-    # "news_essay": category_content,  # 美文
-    # "news_history": category_content,  # 历史
-    # "news_world": category_content,  # 国际
-    # "news_travel": category_content,  # 旅游
-    # "news_baby": category_content,  # 育儿
-    # "news_story": category_content,  # 故事
-    # "news_game": category_content,  # 游戏
-    # "news_food": category_content,  # 美食
-
 
     api_url = "http://www.toutiao.com/api/pc/feed/?category={0}&utm_source=toutiao&widen=1&max_behot_time={1}&max_behot_time_tmp=0&tadrequire=false&as=A175990077EECF2&cp=59078EBCCFF2DE1"
 
-    for_times_model_one = 1
-    for_times_model_two = 1
+    for_times_model_one = 2
+    for_times_model_two = 3
     index = {}
     behot_time = {}
     url = {}
-    for_time = 2 * 24 * 60 * 60  # 两天秒数
-    for_time1 = 5 * 60  # 两天秒数
-    sample_interval = 5*60  # 5分钟 间隔
     model = {}
-    is_model_four = False
 
     reg = re.compile(r'[0-9]+')  # "media_url": "/c/user/5739097906/",
 
-    def __init__(self, model):
+    def __init__(self):
         LingSpider.__init__(self, os.path.basename(__file__))
         for t in self.threads:
             self.behot_time[t] = 0
             self.index[t] = None
             self.url[t] = None
-            self.model[t] = model
+            self.model[t] = ["one", "two"]
         print u'TouTiaoSpider -> init'
 
     def spider(self):
@@ -64,9 +58,6 @@ class TouTiaoSpider(LingSpider):
         # model one behot_time=0 当前时间 遍历 所有栏目 10次
         # model two behot_time取每次请求返回的值 遍历所有栏目 10次
         # # model one 和 two 是白天 模式 定时时间 10分钟 一次
-        # model three behot_time 每次时间戳减5*60s 获取最近两天数据
-        # model four behot_time 每次时间戳减5*60s 获取历史两天数据 (history_time.txt)
-        # # model three 和 four 是 夜间模式 定时时间 1小时一次
 
         name = threading.currentThread().name
         model = self.model[name]
@@ -96,52 +87,16 @@ class TouTiaoSpider(LingSpider):
             if index <= 0:
                 del model[0]
                 index = None
-        elif model[0] == 'three':
-            if index is None:
-                index = self.for_time1
-                behot_time = int(time.time())
-            else:
-                index -= self.sample_interval
-                behot_time -= self.sample_interval
-
-            if index <= 0:
-                del model[0]
-                index = None
-        elif model[0] == 'four':
-            print 'four1'
-            if index is None:
-                print 'four2'
-                index = self.for_time
-                try:
-                    with open('cache/history_time.txt', 'r+') as f:
-                        history_time = f.read()
-                except Exception, e:
-                    print e.message
-                    history_time = None
-                if history_time:
-                    behot_time = int(time.mktime(time.strptime(history_time, "%Y-%m-%d %H:%M:%S")))  # 2017-05-08 00:00:00
-                else:
-                    behot_time = int(time.time()) + (60 * 60)
-                if self.is_model_four is False:
-                    with open('cache/history_time.txt', 'w') as f:
-                        self.is_model_four = True
-                        f.write(time.strftime("%Y-%m-%d 00:00:00", time.localtime(behot_time - 60 * 60 * 24 * 2)))
-            else:
-                index -= self.sample_interval
-                behot_time -= self.sample_interval
-
-            if index <= 0:
-                print 'four3'
-                del model[0]
-                index = None
         else:
             return False
         self.model[name] = model
         self.index[name] = index
         self.behot_time[name] = behot_time
-        self.log(model,u"ling -->循环模式")
-        self.log(index, u"ling --> 循环次数")
         print u"behot_time: ", behot_time
+        print u"循环模式："
+        print model
+        self.log(model, u"ling -->循环模式")
+        self.log(index, u"ling --> 循环次数")
         self.log(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(behot_time)), u"ling --> 循环时间戳")
         # 列表数据
         res, response = self.ling_request(self.api_url.format(name, behot_time))
@@ -166,8 +121,8 @@ class TouTiaoSpider(LingSpider):
         except Exception, e:
             print u"article list 处理出现错误 ！！", e.message
             print u"article list: ", json['data']
+            self.log(u"error:")
             self.log(e.message)
-            self.behot_time[name] = behot_time
             return None
 
         # 文章获取
@@ -178,7 +133,11 @@ class TouTiaoSpider(LingSpider):
                     return res
 
     def save(self, item):
-        self.log(item)
+        res = self.__ling_post(u"http://localhost:8082/addArticle", item)
+        while res['status_code'] != 200:
+            res = self.__ling_post(u"http://localhost:8082/addArticle", item)
+            time.sleep(10)
+        return res
 
     def get_article(self, data):
         item = {}
@@ -259,3 +218,28 @@ class TouTiaoSpider(LingSpider):
             self.log(u"url: {} --->article respond is null !!".format(arcurl))
 
         return True
+
+    def __ling_post(self, url, params):
+        res = {}
+        try:
+            response = requests.get(u"http://localhost:8082/addArticle", params, timeout=61)
+            data = json.loads(response.content)
+            res['status_code'] = response.status_code
+            res['reason'] = response.reason
+            res['message'] = data.get('message')
+            res['result'] = data.get('result')
+        except Exception, e:
+            res['status_code'] = 110
+            res['message'] = u"error:  e.message->{}".format(e.message)
+            res['url'] = url
+        return res
+
+if __name__ == u"__main__":
+    current_file = os.path.basename(__file__)
+    (name, ext) = os.path.splitext(current_file)
+    pid_file = u"cache/{}.pid".format(name)
+    if not os.path.exists(pid_file):
+        spider = TouTiaoSpiderOne()
+        spider.run()
+    else:
+        print u"{}.pid 已经存在 ！！ 请及时处理！！".format(name)

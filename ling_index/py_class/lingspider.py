@@ -131,12 +131,12 @@ class LingSpider(object):
             res['reason'] = response.reason
         except Exception as e:
             res['status_code'] = 110
-            res['reason'] = u"e.message->{}".format(e.message)
+            res['reason'] = u"error:  e.message->{}".format(e.message)
             res['url'] = url
         print res
         self.log(res, 'ling')
 
-        time.sleep(len(self.threads) * 0.35)  # 多线程 请求 延时 时间 间隔
+        time.sleep((threading.active_count()-1) * 0.35)  # 多线程 请求 延时 时间 间隔
         return res, response
 
     # 日志 记录
@@ -145,7 +145,6 @@ class LingSpider(object):
         now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
         log_path = "{}/cache/{}".format(self.project_path, self.pid_file_name)
         if not os.path.exists(log_path):
-            print 'yes', os.path.exists(log_path)
             os.makedirs(log_path)
 
         with open("{}/{}_{}.log".format(log_path, time.strftime("%Y-%m-%d", time.localtime(time.time())), name), 'a') as f:
