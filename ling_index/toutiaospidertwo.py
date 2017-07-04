@@ -145,8 +145,11 @@ class TouTiaoSpiderTwo(LingSpider):
     def save(self, item):
         res = self.__ling_post(u"http://localhost:8082/addArticle", item)
         if res['status_code'] != 200:
-            time.sleep(10)
+            time.sleep(2)
             res = self.__ling_post(u"http://localhost:8082/addArticle", item)
+        if res.get('result') == 200:
+            self.ssdb.request('set', [item['source_url'], item.get('group_id')])
+            self.ssdb.request('expire', [item['source_url'], 60 * 60 * 24 * 10])  # 10天有效期
         return res
 
     def get_article(self, data):
@@ -163,8 +166,7 @@ class TouTiaoSpiderTwo(LingSpider):
         if res.code == 'ok':
             return None
         else:
-            self.ssdb.request('set', [data['source_url'], data.get('group_id')])
-            self.ssdb.request('expire', [data['source_url'], 60*60*24*10])  # 15天有效期
+            pass
 
         arcurl = "http://www.toutiao.com{}".format(data["source_url"])
         res, response = self.ling_request(arcurl)
@@ -174,8 +176,9 @@ class TouTiaoSpiderTwo(LingSpider):
         if res['status_code'] == 404:
             return None
         while res['status_code'] == 403:
-            res, response = self.ling_request(arcurl)
+            self.log('sleep--->> 20s')
             time.sleep(20)
+            res, response = self.ling_request(arcurl)
 
         if response is not None:
             text = unicode(response.content, encoding='utf-8')  # 解决乱码问题
@@ -224,6 +227,8 @@ class TouTiaoSpiderTwo(LingSpider):
                 item['image_url'] = data.get('image_url')
                 item["create_date"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(data.get("behot_time")))
                 item["url"] = response.url  # 文章url 重定向后 url //唯一性判断
+                item["source_url"] = data["source_url"]
+                item["group_id"] = data.get('group_id')
                 # toutiao_author 作者 数据源
                 if data.get('media_url'):
                     m = self.reg.search(data.get('media_url'))
