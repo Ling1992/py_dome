@@ -136,7 +136,7 @@ class LingSpider(object):
         print res
         self.log(res, 'ling')
 
-        time.sleep((threading.active_count()-1) * 0.35)  # 多线程 请求 延时 时间 间隔
+        time.sleep((threading.active_count()-1) * 0.3)  # 多线程 请求 延时 时间 间隔
         return res, response
 
     # 日志 记录

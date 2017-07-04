@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from py_class.lingspider import LingSpider
+from py_class.SSDB import SSDB
 import re
 import os
 import time
@@ -51,6 +52,7 @@ class TouTiaoSpiderOne(LingSpider):
             self.index[t] = None
             self.url[t] = None
             self.model[t] = ["one", "two"]
+        self.ssdb = SSDB('127.0.0.1', 8888)
         print u'TouTiaoSpider -> init'
 
     def spider(self):
@@ -132,13 +134,28 @@ class TouTiaoSpiderOne(LingSpider):
 
     def save(self, item):
         res = self.__ling_post(u"http://localhost:8082/addArticle", item)
-        while res['status_code'] != 200:
-            res = self.__ling_post(u"http://localhost:8082/addArticle", item)
+        if res['status_code'] != 200:
             time.sleep(10)
+            res = self.__ling_post(u"http://localhost:8082/addArticle", item)
         return res
 
     def get_article(self, data):
         item = {}
+
+        if data.get("source_url"):
+            pass
+        else:
+            self.log(u'error:')
+            self.log(data)
+            return None
+
+        res = self.ssdb.request('get', [data['source_url']])
+        if res.code == 'ok':
+            return None
+        else:
+            self.ssdb.request('set', [data['source_url'], data.get('group_id')])
+            self.ssdb.request('expire', [data['source_url'], 60*60*24*10])  # 10天有效期
+
         arcurl = "http://www.toutiao.com{}".format(data["source_url"])
         res, response = self.ling_request(arcurl)
 
@@ -220,7 +237,7 @@ class TouTiaoSpiderOne(LingSpider):
     def __ling_post(self, url, params):
         res = {}
         try:
-            response = requests.get(u"http://localhost:8082/addArticle", params, timeout=61)
+            response = requests.post(u"http://localhost:8082/addArticle", params, timeout=61)
             data = json.loads(response.content)
             res['status_code'] = response.status_code
             res['reason'] = response.reason
@@ -230,7 +247,11 @@ class TouTiaoSpiderOne(LingSpider):
             res['status_code'] = 110
             res['message'] = u"error:  e.message->{}".format(e.message)
             res['url'] = url
+        self.log(res)
         return res
+
+    def __del__(self):
+        self.ssdb.close()
 
 if __name__ == u"__main__":
     current_file = os.path.basename(__file__)

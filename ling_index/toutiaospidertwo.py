@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 from py_class.lingspider import LingSpider
+from base_class.SSDB import SSDB
 import re
 import os
 import time
 import threading
+import requests
 from pyquery import PyQuery as pq
 
 
@@ -37,7 +39,7 @@ class TouTiaoSpiderTwo(LingSpider):
     behot_time = {}
     url = {}
     for_time = 2 * 24 * 60 * 60  # 两天秒数
-    sample_interval = 5*60  # 5分钟 间隔
+    sample_interval = 5*60   # 5分钟 间隔
     model = {}
     is_model_four = False
 
@@ -50,6 +52,7 @@ class TouTiaoSpiderTwo(LingSpider):
             self.index[t] = None
             self.url[t] = None
             self.model[t] = ["three", "four"]
+        self.ssdb = SSDB('127.0.0.1', 8888)
         print u'TouTiaoSpider -> init'
 
     def spider(self):
@@ -66,7 +69,7 @@ class TouTiaoSpiderTwo(LingSpider):
         # 处理 循环条件
         if model is None or len(model) <= 0:
             return False
-        if  model[0] == 'three':
+        if model[0] == 'three':
             if index is None:
                 index = self.for_time
                 behot_time = int(time.time())
@@ -140,10 +143,29 @@ class TouTiaoSpiderTwo(LingSpider):
                     return res
 
     def save(self, item):
-        self.log(item)
+        res = self.__ling_post(u"http://localhost:8082/addArticle", item)
+        if res['status_code'] != 200:
+            time.sleep(10)
+            res = self.__ling_post(u"http://localhost:8082/addArticle", item)
+        return res
 
     def get_article(self, data):
         item = {}
+
+        if data.get("source_url"):
+            pass
+        else:
+            self.log(u'error:')
+            self.log(data)
+            return None
+
+        res = self.ssdb.request('get', [data['source_url']])
+        if res.code == 'ok':
+            return None
+        else:
+            self.ssdb.request('set', [data['source_url'], data.get('group_id')])
+            self.ssdb.request('expire', [data['source_url'], 60*60*24*10])  # 15天有效期
+
         arcurl = "http://www.toutiao.com{}".format(data["source_url"])
         res, response = self.ling_request(arcurl)
 
@@ -221,6 +243,25 @@ class TouTiaoSpiderTwo(LingSpider):
             self.log(u"url: {} --->article respond is null !!".format(arcurl))
 
         return True
+
+    def __ling_post(self, url, params):
+        res = {}
+        try:
+            response = requests.post(u"http://localhost:8082/addArticle", params, timeout=61)
+            data = json.loads(response.content)
+            res['status_code'] = response.status_code
+            res['reason'] = response.reason
+            res['message'] = data.get('message')
+            res['result'] = data.get('result')
+        except Exception, e:
+            res['status_code'] = 110
+            res['message'] = u"error:  e.message->{}".format(e.message)
+            res['url'] = url
+        self.log(res)
+        return res
+
+    def __del__(self):
+        self.ssdb.close()
 
 if __name__ == u"__main__":
     current_file = os.path.basename(__file__)
