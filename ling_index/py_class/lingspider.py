@@ -7,6 +7,7 @@ import requests
 import threading
 import Queue
 import os
+import re
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -38,7 +39,7 @@ class LingSpider(object):
         self.pid_file_name = name
         self.pid_file_path = None
         self.project_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        self.q = Queue.Queue(128)
+        self.q = Queue.Queue(255)
 
     # pid 文件处理
     def create_pid_file(self):
@@ -95,7 +96,7 @@ class LingSpider(object):
         while os.path.isfile(self.pid_file_path) and threading.active_count() > 2:
             print u"当前线程数：", threading.active_count()
             if self.q.qsize() >= 1:
-                item = self.q.get()
+                item = self.q.get_nowait()
                 res = self.save(item)
                 print u"save response:", res
             else:
@@ -154,8 +155,42 @@ class LingSpider(object):
             f.write(json.dumps(content, ensure_ascii=False, encoding='utf-8'))
             f.write('\n')
 
+    def get_json_obj(self, string_1):
+        print 'start'
+        reg1 = re.compile(r'{((?!}).)*')
+        reg2 = re.compile(r'}((?!{).)*')
+        reg3 = re.compile(r'{')
+        reg4 = re.compile(r'}')
+        string_1 = re.sub(r'[^{}]*', '', string_1, 1)
+        index1 = 0
+        index2 = 0
+        res = ''
+        while index1 != index2 or index1 == 0:
+            s = reg1.search(string_1)
+            if s:
+                res = res + s.group()
+                index1 = len(reg3.findall(s.group())) + index1
+                string_1 = reg1.sub("", string_1, 1)
+            else:
+                pass
+            s = reg2.search(string_1)
+            if s:
+                res = res + s.group()
+                index2 = len(reg4.findall(s.group())) + index2
+                string_1 = reg2.sub("", string_1, 1)
+            else:
+                pass
+        s = re.search(r'{[\s\S]*}', res)
+        if s:
+            res = s.group()
+            res = json.loads(res)
+        else:
+            res = ''
+        return res
+
     def __del__(self):
         if os.path.isfile(self.pid_file_path):
             self.del_pid_file()
+        print '__del__ --> LingSpider'
 
     pass

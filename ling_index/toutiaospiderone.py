@@ -147,7 +147,7 @@ class TouTiaoSpiderOne(LingSpider):
         if data.get("source_url"):
             pass
         else:
-            self.log(u'error:')
+            self.log(u'error: source_url not find')
             self.log(data)
             return None
 
@@ -200,9 +200,18 @@ class TouTiaoSpiderOne(LingSpider):
                         self.log(res)
                         return None
                 else:
-                    self.log('error: article_genre == gallery  --> search nothing2')
-                    self.log(dom.html())
-                    return None
+                    figures = dom('figure')
+                    content = ''
+                    if figures:
+                        for figure in figures.items():
+                            print figure.find('img')
+                            content = content + "<p>&darr;{0}</p>\n<p><img src=\"{1}\" alt=\"{2}\"/></p>\n".format(
+                                figure.text(), figure.find('img').attr('alt-src'), title)
+                        content = "<div>\n{}</div>\n".format(content)
+                    else:
+                        self.log('error: article_genre == gallery  --> search nothing2')
+                        self.log(dom.html())
+                        return None
                 pass
             else:
                 content = dom.find(".article-content").html()
@@ -262,7 +271,11 @@ class TouTiaoSpiderOne(LingSpider):
 
                 self.log('push save queue!!')
                 # 放入队列
-                self.q.put(item)
+                try:
+                    self.q.put_nowait(item)
+                except Exception, e:
+                    self.log('error : put queue error ')
+                    self.log(e.message)
             else:
                 self.log(u"url:{} -->not find content".format(arcurl))
         else:
