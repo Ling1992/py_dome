@@ -14,6 +14,7 @@ create table if not exists `toutiao_article_list`(
     `image_url` varchar(100) default '' comment '图片 URI',
     `create_date` datetime not null comment '文章创建时间',
     `author_id` bigint not null comment '作者 id',
+    `article_url` varchar(100) default '' comment '文章地址url 本地使用',
     `article_url_md5` varchar(32) default '' comment '文章地址url md5唯一 标示',
     `click_amount` int not null default 0 comment '点击量',
     `likes_amount` int not null default 0 comment '点赞数',
