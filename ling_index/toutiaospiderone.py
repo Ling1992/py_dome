@@ -134,12 +134,11 @@ class TouTiaoSpiderOne(LingSpider):
 
     def save(self, item):
         res = self.__ling_post(u"http://localhost:8082/addArticle", item)
-        if res['status_code'] != 200:
-            time.sleep(2)
-            res = self.__ling_post(u"http://localhost:8082/addArticle", item)
         if res.get('result') == 200:
             self.ssdb.request('set', [item['source_url'], item.get('group_id')])
-            self.ssdb.request('expire', [item['source_url'], 60 * 60 * 24 * 10])  # 10天有效期
+            self.ssdb.request('expire', [item['source_url'], 60 * 60 * 24 * 1])  # 1天有效期
+        if res.get('status_code') != 200:
+            self.log(item)
         return res
 
     def get_article(self, data):
@@ -173,34 +172,67 @@ class TouTiaoSpiderOne(LingSpider):
         if response is not None:
             text = unicode(response.content, encoding='utf-8')  # 解决乱码问题
             dom = pq(text).make_links_absolute(response.url)
-            content = dom.find(".article-content").html()
 
-            if not content or not len(content):
-                content = dom('article').html()
+            title, number = re.subn("'", "\\'", str(data.get("title")))  # 解决 单引号 插入数据库 出错问题
+            if data['article_genre'] == "gallery":
+                s = re.search(r'var[\s]+gallery[\s]*=[\s]*{[\s\S]+(};)', dom.html())
+                if s:
+                    # print s.group()
+                    res = s.group()
+                    content_obj = self.get_json_obj(res)
+                    if content_obj:
+                        try:
+                            sub_images = content_obj['sub_images']
+                            sub_abstracts = content_obj['sub_abstracts']
+                            content = ''
+                            for a in range(len(sub_images)):
+                                content = content + "<p>&darr;{0}</p>\n<p><img src=\"{1}\" alt=\"{2}\"/></p>\n".format(
+                                    sub_abstracts[a], sub_images[a]['url'], title)
+                            content = "<div>\n{}</div>\n".format(content)
+                            # print content
+                        except Exception, e:
+                            self.log('error:')
+                            self.log(e.message)
+                            return None
+                            # print st
+                    else:
+                        self.log('error: article_genre == gallery  --> search nothing1')
+                        self.log(res)
+                        return None
+                else:
+                    self.log('error: article_genre == gallery  --> search nothing2')
+                    self.log(dom.html())
+                    return None
+                pass
+            else:
+                content = dom.find(".article-content").html()
 
-            if not content or not len(content):
-                content = dom.find('.article-main').html()
+                if not content or not len(content):
+                    content = dom('article').html()
 
-            if not content or not len(content):
-                content = dom.find('.rich_media_content').html()
+                if not content or not len(content):
+                    content = dom.find('.article-main').html()
 
-            if not content or not len(content):
-                content = dom.find(".text").html()
+                if not content or not len(content):
+                    content = dom.find('.rich_media_content').html()
 
-            if not content or not len(content):
-                content = dom.find(".contentMain").html()
+                if not content or not len(content):
+                    content = dom.find(".text").html()
 
-            if not content or not len(content):
-                content = dom.find('.textindent2em').html()
+                if not content or not len(content):
+                    content = dom.find(".contentMain").html()
 
-            if not content or not len(content):
-                content = dom.find('.f14').html()
+                if not content or not len(content):
+                    content = dom.find('.textindent2em').html()
 
-            if not content or not len(content):
-                content = dom.find('.m-detail-bd').html()
+                if not content or not len(content):
+                    content = dom.find('.f14').html()
 
-            if not content or not len(content):
-                content = dom.find('.artical-content').html()
+                if not content or not len(content):
+                    content = dom.find('.m-detail-bd').html()
+
+                if not content or not len(content):
+                    content = dom.find('.artical-content').html()
 
             if content:
                 # toutiao_article_category 分类 数据源
@@ -211,7 +243,6 @@ class TouTiaoSpiderOne(LingSpider):
                 content, number = re.subn("'", "\\'", str(content))  # 解决 单引号 插入数据库 出错问题
                 item['article_content'] = content
                 # toutiao_article_list 列表 数据源
-                title, number = re.subn("'", "\\'", str(data.get("title")))  # 解决 单引号 插入数据库 出错问题
                 item["title"] = title
                 item['abstract'] = data.get('abstract')
                 item['image_url'] = data.get('image_url')
@@ -243,20 +274,30 @@ class TouTiaoSpiderOne(LingSpider):
         res = {}
         try:
             response = requests.post(u"http://localhost:8082/addArticle", params, timeout=61)
-            data = json.loads(response.content)
+
             res['status_code'] = response.status_code
+            try:
+                data = json.loads(response.content)
+                pass
+            except Exception, e:
+                data = {u"message": u'error: try json.loads(response.content) ->{}'.format(e.message)}
+                res['status_code'] = 110110
+
             res['reason'] = response.reason
             res['message'] = data.get('message')
             res['result'] = data.get('result')
+            if response.status_code != 200:
+                res['body'] = response.content
         except Exception, e:
             res['status_code'] = 110
-            res['message'] = u"error:  e.message->{}".format(e.message)
+            res['message'] = u"error:post  e.message->{}".format(e.message)
             res['url'] = url
         self.log(res)
         return res
 
     def __del__(self):
         self.ssdb.close()
+        print '__del__ --> TouTiaoSpiderOne'
 
 if __name__ == u"__main__":
     current_file = os.path.basename(__file__)
