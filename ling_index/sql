@@ -32,6 +32,7 @@ create table if not exists `toutiao_author` (
     `author_id` bigint not null comment '作者 id',
     `name` varchar(25) default '' comment '名称',
     `media_id` bigint default 0 comment '媒体 id',
+    `url` varchar(80) default '' comment '图标',
     `fensi` int default 0 comment '粉丝数',
     `guanzhu` int default 0 comment '关注',
     `type` varchar(20) default '' comment '类型', /* 待处理 是否需要 author_category */

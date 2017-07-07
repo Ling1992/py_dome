@@ -5,6 +5,7 @@ import cookielib
 import re
 import demjson
 import time
+import os
 from base_class.ling_mysql import MysqlLing
 
 agent = [
@@ -24,7 +25,7 @@ agent = [
     "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_3) AppleWebKit/535.20 (KHTML, like Gecko) Chrome/19.0.1036.7 Safari/535.20",
     "Opera/9.80 (Macintosh; Intel Mac OS X 10.6.8; U; fr) Presto/2.9.168 Version/11.52"
-    ]
+    ] 
 reg = re.compile(r'userInfo[\s]*=[\s]*{?[^}]*};?')
 reg1 = re.compile(r'riot.mount[\s\S]{0,3}statistics[\s\S]?,{[^}]*}\);')
 reg2 = re.compile(r'{[^}]*}')
@@ -35,11 +36,12 @@ def update(item):
         """
             sql 操作
         """
+        print item
         ling_con = MysqlLing()
         ling_con.insert(
-            "UPDATE author_list SET name='%s', media_id='%s', fensi='%s', guanzhu='%s', type='%s' where id='%s' "
+            "UPDATE toutiao_author SET name='%s', media_id='%s', fensi='%s', guanzhu='%s', type='%s', url='%s' where author_id='%s' "
             %
-            (item['name'], item['mediaId'], item['fensi'], item['guanzhu'], item['type'], item['id'])
+            (item['name'], item['mediaId'], item['fensi'], item['guanzhu'], item['type'], item['avatarUrl'], item['id'])
         )
     except Exception as e:
         print e
@@ -47,7 +49,8 @@ def update(item):
 
 if __name__ == '__main__':
     print __name__
-
+    with open('cache/update_user.pid', 'w') as f:
+        f.write('{}'.format(os.getpid()))
     # get session
     session = requests.session()
     session.cookies = cookielib.LWPCookieJar(filename="domain.txt")
@@ -61,11 +64,11 @@ if __name__ == '__main__':
     base_url = "http://www.toutiao.com/c/user/{}/"
 
     ling_con = MysqlLing()
-    author_list = ling_con.search("select * from author_list")
+    author_list = ling_con.search("select * from toutiao_author")
 
     if len(author_list) >= 1:
         for author in author_list:
-            user_id = author['id']
+            user_id = author['author_id']
             header = {
                 "Host": "www.toutiao.com",
                 "User-Agent": random.choice(agent)
@@ -79,7 +82,7 @@ if __name__ == '__main__':
             respond = session.get(base_url.format(user_id), headers=header, timeout=10)
             session.cookies.save()
             if respond and respond.status_code == 200:
-                print "get respond"
+                print "get respond ", user_id
             else:
                 print respond.status_code, respond.reason
                 raise Exception('session.get(base_url.format(user_id), headers=header, timeout=10) error ')
@@ -98,7 +101,10 @@ if __name__ == '__main__':
                 update(user)
             else:
                 continue
-            time.sleep(0.5)
+            time.sleep(2)
             pass
+        pass
 
+    if os.path.isfile('cache/update_user.pid'):
+        os.remove('cache/update_user.pid')
 
