@@ -39,8 +39,11 @@ source ${envpath}'activate'  &&
 python toutiaospidertwo.py  &&
 deactivate  &&
 echo '任务结束: '`date +'%Y-%m-%d %H:%M:%S'` >> ${shlogdir}`date +%Y-%m-%d`'_run.log' &&
-echo -e "\n" >>${shlogdir}`date +%Y-%m-%d`'_run.log'
+echo -e "\n" >>${shlogdir}`date +%Y-%m-%d`'_run.log' &&
 
+/bin/sh /Users/ling/PycharmProjects/py_dome/get_user_info.sh >/dev/null 2>&1 &&
+
+echo 'get_user_info over: '`date +'%Y-%m-%d %H:%M:%S'` >> ${shlogdir}`date +%Y-%m-%d`'_run.log'
 
 # # 每小时 执行  toutiaospidertwo
 # # 0 */2 * * * /bin/sh /Users/ling/PycharmProjects/py_dome/ling_index/toutiaospidertwo.sh >/dev/null 2>&1

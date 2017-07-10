@@ -116,6 +116,7 @@ class LingSpider(object):
         header['User-Agent'] = random.choice(self.agent)
         print 'threading:{} url:{} User-Agent:{}'.format(name, url, header.get('User-Agent'))
         session = requests.Session()
+        session.keep_alive = False
         session.cookies = cookielib.LWPCookieJar(filename="{}/cache/{}/{}_cookies.txt".format(self.project_path, self.pid_file_name, name))
         res = {}
         response = None

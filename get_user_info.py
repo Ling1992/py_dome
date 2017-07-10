@@ -49,10 +49,11 @@ def update(item):
 
 if __name__ == '__main__':
     print __name__
-    with open('cache/update_user.pid', 'w') as f:
+    with open('cache/get_user_info.pid', 'w') as f:
         f.write('{}'.format(os.getpid()))
     # get session
     session = requests.session()
+    session.keep_alive = False
     session.cookies = cookielib.LWPCookieJar(filename="domain.txt")
     header = {
         "Host": "www.toutiao.com",
@@ -64,7 +65,7 @@ if __name__ == '__main__':
     base_url = "http://www.toutiao.com/c/user/{}/"
 
     ling_con = MysqlLing()
-    author_list = ling_con.search("select * from toutiao_author")
+    author_list = ling_con.search("select * from toutiao_author where media_id=0")
 
     if len(author_list) >= 1:
         for author in author_list:
@@ -101,10 +102,10 @@ if __name__ == '__main__':
                 update(user)
             else:
                 continue
-            time.sleep(2)
+            time.sleep(0.3)
             pass
         pass
 
-    if os.path.isfile('cache/update_user.pid'):
-        os.remove('cache/update_user.pid')
+    if os.path.isfile('cache/get_user_info.pid'):
+        os.remove('cache/get_user_info.pid')
 

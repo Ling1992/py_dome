@@ -39,7 +39,10 @@ source ${envpath}'activate'  &&
 python toutiaospiderone.py  &&
 deactivate  &&
 echo '任务结束: '`date +'%Y-%m-%d %H:%M:%S'` >> ${shlogdir}`date +%Y-%m-%d`'_run.log' &&
-echo -e "\n" >>${shlogdir}`date +%Y-%m-%d`'_run.log'
+echo -e "\n" >>${shlogdir}`date +%Y-%m-%d`'_run.log' &&
+
+/bin/sh /Users/ling/PycharmProjects/py_dome/get_user_info.sh >/dev/null 2>&1  &&
+echo 'get_user_info over: '`date +'%Y-%m-%d %H:%M:%S'` >> ${shlogdir}`date +%Y-%m-%d`'_run.log'
 
 
 # # 每5分钟 执行  toutiaospiderone
