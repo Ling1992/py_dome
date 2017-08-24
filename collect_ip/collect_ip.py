@@ -2,10 +2,9 @@
 import cookielib
 import os
 import random
-from ip_mysql import IpMysql
-
 import requests
 import time
+from ip_mysql import IpMysql
 from pyquery import PyQuery as pq
 import sys
 reload(sys)
@@ -144,7 +143,7 @@ def save(data):
     #     # 大于 等于 只需要更新
     #     if:
     #     else:  # 否则 添加
-    if sql.total() >= 1000:
+    if sql.totalall() >= 1000:
         # 只需要更新 失效的 ip
         if sql.totalofdisabelip() >= 1:
             # 存在失效 ip
