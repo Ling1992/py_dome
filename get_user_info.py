@@ -4,9 +4,14 @@ import random
 import cookielib
 import re
 import demjson
-import time
 import os
 from base_class.ling_mysql import MysqlLing
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
+
+sys.path.append("/Users/ling/PycharmProjects/py_dome/")
+from collect_ip.ip_mysql import IpMysql
 
 agent = [
     "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
@@ -48,7 +53,8 @@ def update(item):
 
 
 if __name__ == '__main__':
-    print __name__
+    current_pid = os.getpid()
+
     with open('cache/get_user_info.pid', 'w') as f:
         f.write('{}'.format(os.getpid()))
     # get session
@@ -63,7 +69,7 @@ if __name__ == '__main__':
     session.cookies.save()
 
     base_url = "http://www.toutiao.com/c/user/{}/"
-
+    ip_sql = IpMysql({'db': 'python_bases'})
     ling_con = MysqlLing()
     author_list = ling_con.search("select * from toutiao_author where media_id=0")
 
@@ -74,19 +80,42 @@ if __name__ == '__main__':
                 "Host": "www.toutiao.com",
                 "User-Agent": random.choice(agent)
             }
+            if ip_sql.totalip() >= 1:
+                ip_data = ip_sql.getrandomip()
+            else:
+                exit(' mysql 中已经没有 ip 可以 用')
+
+            proxies = {ip_data['type']: "{}://{}:{}".format(ip_data['type'], ip_data['ip'], ip_data['port'])}
+
             try:
                 session.cookies.load(ignore_discard=True)
             except Exception as e:
                 print e
-                raise Exception('session.cookies.load error ')
+                # raise Exception('session.cookies.load error ')
+                print u"session.cookies.load error"
 
-            respond = session.get(base_url.format(user_id), headers=header, timeout=10)
-            session.cookies.save()
-            if respond and respond.status_code == 200:
-                print "get respond ", user_id
-            else:
-                print respond.status_code, respond.reason
-                raise Exception('session.get(base_url.format(user_id), headers=header, timeout=10) error ')
+            try:
+                respond = session.get(base_url.format(user_id), headers=header, timeout=5, proxies=proxies)
+                session.cookies.save()
+                if respond and respond.status_code == 200:
+                    print "get respond ", user_id
+                elif respond.status_code == 407:
+                    ip_sql.disableip(ip_data.get('ip'))
+                else:
+                    print 'error'
+                    print respond.status_code, respond.reason
+                    # time.sleep(5)
+                    continue
+                    # raise Exception('session.get(base_url.format(user_id), headers=header, timeout=10) error ')
+            except Exception as e:
+                if ip_sql.check_exception(e):
+                    ip_sql.disableip(ip_data['ip'])
+                    print 'proxy error!!!!'
+                else:
+                    print u"session.cookies.load error"
+                    print e.message
+                # time.sleep(5)
+                continue
 
             s = reg.search(respond.content)
             s1 = reg1.search(respond.content)
@@ -101,8 +130,9 @@ if __name__ == '__main__':
                 user = dict(user1.items() + user2.items())
                 update(user)
             else:
+                # time.sleep(5)
                 continue
-            time.sleep(0.3)
+            # time.sleep(0.5)
             pass
         pass
 
