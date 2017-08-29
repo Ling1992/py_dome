@@ -143,7 +143,7 @@ def save(data):
     #     # 大于 等于 只需要更新
     #     if:
     #     else:  # 否则 添加
-    if sql.totalall() >= 1000:
+    if sql.totalip() >= 1000:
         # 只需要更新 失效的 ip
         if sql.totalofdisabelip() >= 1:
             # 存在失效 ip
