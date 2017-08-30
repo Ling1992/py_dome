@@ -2,6 +2,7 @@
 import requests
 import random
 import cookielib
+import time
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -41,7 +42,12 @@ class LingRequest(object):
             exit(' mysql 中已经没有 ip 可以 用')
         self.cookies_file_path = u"./cookies.txt"
 
-    def request(self, base_url, ):
+    def request(self, base_url, retries=3):
+
+        if retries < 0:
+            self.__update_request()
+            retries = 3
+
         header = {
             "Host": "www.toutiao.com",
             "User-Agent": self.a_u
@@ -58,34 +64,40 @@ class LingRequest(object):
             session.cookies.load(ignore_discard=True)
         except Exception as e:
             print e
-            # raise Exception('session.cookies.load error ')
             print u"session.cookies.load error"
-
         try:
             respond = session.get(base_url, headers=header, timeout=5, proxies=proxies)
             session.cookies.save()
             if respond and respond.status_code == 200:
+                time.sleep(10)
                 print "get respond "
             elif respond.status_code == 407:
-                self.ip_sql.disableip(self.ip_data.get('ip'))
+                print 'proxy error !!', respond.status_code
+                self.__update_request()
+                return self.request(base_url, retries)
             else:
                 print 'error'
                 print respond.status_code, respond.reason
-                # time.sleep(5)
-                # raise Exception('session.get(base_url.format(user_id), headers=header, timeout=10) error ')
+                time.sleep((4 - retries) * 8)
+                return self.request(base_url, retries-1)
         except Exception as e:
             if self.ip_sql.check_exception(e):
-                self.ip_sql.disableip(ip_data['ip'])
-                print 'proxy error!!!!'
+                print 'proxy error!!!!', e.message
+                self.__update_request()
+                return self.request(base_url, retries)
             else:
                 print u"session.cookies.load error"
                 print e.message
-                # time.sleep(5)
+                time.sleep(5)
+                if retries <= 1:
+                    exit('无法连接网络 ！！！')
+                return self.request(base_url, retries - 1)
+        return respond
 
     def __update_request(self):
         with open(self.cookies_file_path, 'w') as f:
             f.write("")
-        pass
+        self.ip_sql.disableip(self.ip_data.get('ip'))
         self.a_u = random.choice(agent)
         if self.ip_sql.totalip() >= 1:
             self.ip_data = self.ip_sql.getrandomip()
