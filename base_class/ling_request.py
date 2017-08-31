@@ -40,9 +40,10 @@ class LingRequest(object):
             self.ip_data = self.ip_sql.getrandomip()
         else:
             exit(' mysql 中已经没有 ip 可以 用')
-        self.cookies_file_path = u"./cookies.txt"
+        self.cookies_file_path = u"cookies.txt"
+        self.__update_request()
 
-    def request(self, base_url, retries=3):
+    def request(self, base_url, retries=6):
 
         if retries < 0:
             self.__update_request()
@@ -66,27 +67,29 @@ class LingRequest(object):
             print e
             print u"session.cookies.load error"
         try:
+            print base_url
+            print proxies
             respond = session.get(base_url, headers=header, timeout=5, proxies=proxies)
             session.cookies.save()
             if respond and respond.status_code == 200:
-                time.sleep(10)
-                print "get respond "
-            elif respond.status_code == 407:
-                print 'proxy error !!', respond.status_code
+                time.sleep(10)  # 请求 间隔
+                print "get respond : \n"
+            elif respond.status_code == 407:  # # 需要代理认证
+                print 'proxy error :: \n', respond.status_code
                 self.__update_request()
                 return self.request(base_url, retries)
             else:
-                print 'error'
+                print 'error: \n'
                 print respond.status_code, respond.reason
-                time.sleep((4 - retries) * 8)
+                time.sleep((7 - retries) * 5)
                 return self.request(base_url, retries-1)
         except Exception as e:
-            if self.ip_sql.check_exception(e):
-                print 'proxy error!!!!', e.message
+            if self.ip_sql.check_exception(e):  # # 代理 拒绝 或 连接 超时
+                print 'proxy error \n', e.message
                 self.__update_request()
                 return self.request(base_url, retries)
             else:
-                print u"session.cookies.load error"
+                print u"session.cookies.load error \n"
                 print e.message
                 time.sleep(5)
                 if retries <= 1:
@@ -94,16 +97,28 @@ class LingRequest(object):
                 return self.request(base_url, retries - 1)
         return respond
 
-    def __update_request(self):
+    def __update_request(self, type=1):
         with open(self.cookies_file_path, 'w') as f:
             f.write("")
-        self.ip_sql.disableip(self.ip_data.get('ip'))
-        self.a_u = random.choice(agent)
-        if self.ip_sql.totalip() >= 1:
-            self.ip_data = self.ip_sql.getrandomip()
-        else:
-            exit(' mysql 中已经没有 ip 可以 用')
 
+        session = requests.session()
+        session.keep_alive = False
+        session.cookies = cookielib.LWPCookieJar(filename=self.cookies_file_path)
+        header = {
+            "Host": "www.toutiao.com",
+            "User-Agent": self.a_u
+        }
+        session.get("http://www.toutiao.com/", headers=header, timeout=10)
+        session.cookies.save()
+        time.sleep(10)
+
+        if type == 1:
+            self.ip_sql.disableip(self.ip_data.get('ip'))
+            self.a_u = random.choice(agent)
+            if self.ip_sql.totalip() >= 1:
+                self.ip_data = self.ip_sql.getrandomip()
+            else:
+                exit(' mysql 中已经没有 ip 可以 用')
 
 
 
