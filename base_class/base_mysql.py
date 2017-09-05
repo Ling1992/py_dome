@@ -9,6 +9,7 @@ class MysqlBase(object):
     __instance = None
 
     def __init__(self, *args):
+        print "MysqlBase __init__"
         pass
 
     def __new__(cls, *args):

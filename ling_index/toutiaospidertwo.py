@@ -185,7 +185,7 @@ class TouTiaoSpiderTwo(LingSpider):
             dom = pq(text).make_links_absolute(response.url)
             title, number = re.subn("'", "\\'", str(data.get("title")))  # 解决 单引号 插入数据库 出错问题
             if data['article_genre'] == "gallery":
-                s = re.search(r'var[\s]+gallery[\s]*=[\s]*{[\s\S]+(};)', dom.html())
+                s = re.search(r'gallery[\s]*=[\s]*{[\s\S]+(};)', dom.html())
                 if s:
                     # print s.group()
                     res = s.group()

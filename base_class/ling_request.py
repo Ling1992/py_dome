@@ -43,14 +43,14 @@ class LingRequest(object):
         self.cookies_file_path = u"cookies.txt"
         self.__update_request()
 
-    def request(self, base_url, retries=6):
+    def request(self, base_url, retries=3):
 
         if retries < 0:
             self.__update_request()
             retries = 3
-
+        host = ["", "www.toutiao.com"]
         header = {
-            "Host": "www.toutiao.com",
+            "Host": host[retries % 2],
             "User-Agent": self.a_u
         }
 
@@ -73,23 +73,30 @@ class LingRequest(object):
             session.cookies.save()
             if respond and respond.status_code == 200:
                 time.sleep(10)  # 请求 间隔
-                print "get respond : \n"
+                print "get respond :", base_url
             elif respond.status_code == 407:  # # 需要代理认证
-                print 'proxy error :: \n', respond.status_code
+                print 'proxy error :', respond.status_code
                 self.__update_request()
                 return self.request(base_url, retries)
             else:
-                print 'error: \n'
-                print respond.status_code, respond.reason
-                time.sleep((7 - retries) * 5)
+                print 'error:'
+                print respond.status_code, respond.reason, base_url
+                time.sleep((4 - retries) * 5)
+                self.__update_request(0)
                 return self.request(base_url, retries-1)
         except Exception as e:
             if self.ip_sql.check_exception(e):  # # 代理 拒绝 或 连接 超时
                 print 'proxy error \n', e.message
                 self.__update_request()
                 return self.request(base_url, retries)
+            elif "Connection aborted" in e.message:
+                if retries <= 1:
+                    exit('Connection aborted ！！！')
+                time.sleep((4 - retries) * 5)
+                return self.request(base_url, retries - 1)
+                pass
             else:
-                print u"session.cookies.load error \n"
+                print u"无法连接网络 ！！！"
                 print e.message
                 time.sleep(5)
                 if retries <= 1:
@@ -110,15 +117,19 @@ class LingRequest(object):
         }
         session.get("http://www.toutiao.com/", headers=header, timeout=10)
         session.cookies.save()
-        time.sleep(10)
 
         if type == 1:
             self.ip_sql.disableip(self.ip_data.get('ip'))
-            self.a_u = random.choice(agent)
             if self.ip_sql.totalip() >= 1:
                 self.ip_data = self.ip_sql.getrandomip()
             else:
                 exit(' mysql 中已经没有 ip 可以 用')
+            self.a_u = random.choice(agent)
+        else:
+            time.sleep(5)
+
+
+
 
 
 

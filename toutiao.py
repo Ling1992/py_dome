@@ -65,8 +65,6 @@ agent = [
     "Opera/9.80 (Macintosh; Intel Mac OS X 10.6.8; U; fr) Presto/2.9.168 Version/11.52"
     ]
 
-http = ['119.5.1.13:808', '218.22.219.133:808', '183.78.183.156:82', '218.64.37.70:8118', '116.199.115.78:80']
-# https = ['112.193.91.55:80', '222.89.102.6:808', '119.48.181.236:8118', '119.96.203.368118', '115.202.162.65:808']
 regex = re.compile(r'^/api/')  # url = '/api/pc/subject/6417225587135349249/'
 reg = re.compile(r'[0-9]+')  # "media_url": "/c/user/5739097906/",
 
@@ -75,13 +73,8 @@ def ttrequsts(url, **args):
     name = threading.current_thread().name
     print 'category:{} url:{}'.format(name, url)
     header = {
-        # "HOST": "www.toutiao.com", # 解决 301 重定向问题
         "Referfer": "www.toutiao.com",
-        "User-Agent": random.choice(agent)
-    }
-    proxies = {
-        'http': 'http://{}'.format(random.choice(http))
-        # 'https': 'https://{}'.format(random.choice(https))
+        "User-Agent": random.choice(agent),
     }
     print header['User-Agent']
     # 默认的是FileCookieJar没有实现save函数。
@@ -190,6 +183,7 @@ def start():
 
     category[name]['over'] = True
 
+
 def parselist(response):
     name = threading.current_thread().name
     json = response.json()
@@ -260,7 +254,6 @@ def log(content, key_str='default'):
         f.write('{} -->>'.format(key_str))
         f.write('{}:\n'.format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))))
         f.write('\t')
-        # f.write(repr(content))
         f.write(json.dumps(content, ensure_ascii=False, encoding='utf-8'))
         f.write('\n')
 
@@ -290,60 +283,9 @@ def save(item):
         # data["content"] = css.find(".article-content").html()
         # res = requests.post("http://192.168.10.254:5678/index.php/xsapi/ucsave", data={"data": json.dumps(data)})
         # print res.text
-        """
-            sql 操作
-        """
-        ling_con = MysqlLing()
-        """
-        count = ling_con.count("select * from article_list where url='%s'"
-                               %
-                               item['url']
-                               )
-        print count
-        if count:
-            print '数据 重复！！！'
-        else:
-            print '新增 数据 ！！！'
-            res = ling_con.insert(
-                "insert into article_list(title, tag, chinese_tag, url, group_id, original_time) "
-                "VALUES "
-                "('%s', '%s', '%s', '%s', '%s', '%s')"
-                %
-                (item['title'], item['tag'], item['chinese_tag'], item['url'], item['group_id'], item['original_time'])
-            )
-            print res
-            if res:
-                pass
-            else:
-                raise Exception('insert article_list error ')
-            res = ling_con.insert("INSERT INTO article(url, title, article) "
-                                  "VALUES "
-                                  "('%s', '%s', '%s')"
-                                  %
-                                  (item['url'], item['title'], item['content'])
-                                  )
-            print res
-            if res:
-                print 'insert article success !!'
-            else:
-                raise Exception('insert article error ')
-
-        print "\n"
-        """
-        count = ling_con.count("select * from author_list where id='%s'"
-                               %
-                               item['author_id']
-                               )
-        if count:
-            pass
-        else:
-            print 'insert author_list'
-            ling_con.insert(
-                "insert into author_list(id) VALUES ('%s')" % (item['author_id'])
-            )
-    except Exception as e:
-        print e
         pass
+    except Exception, e:
+        print e.message
 
 
 if __name__ == "__main__":

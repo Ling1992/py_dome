@@ -89,3 +89,16 @@ create table if not exists article(
     primary key (id),
     unique key idy(url)
 )ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='文章';
+
+
+create table if not exists pi_pool(
+    `id` int not null auto_increment comment '行号',
+    `ip` varchar(15) not null comment 'ip 地址',
+    `port` int(5) not null comment '端口',
+    `type` tinyint(1) not null default 1 comment '类型 1 http 2 https',
+    `state` tinyint(1) not null default 0 comment '是否有效  0：有效 1：无效',
+    primary key (id),
+    unique key idy(ip)
+)ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='文章';
+
+`is_hot` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否有效  0：正常 1：热门'

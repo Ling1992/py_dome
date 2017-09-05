@@ -36,7 +36,7 @@ def save(item):
             sql 操作
         """
         ling_con = MysqlLing()
-        count = ling_con.count("select * from author where id='%s'"
+        count = ling_con.count("select * from toutiao_author where id='%s'"
                                %
                                item['id']
                                )
@@ -46,7 +46,7 @@ def save(item):
         else:
 
             res = ling_con.insert(
-                "insert into author(id, name, media_id, fensi, guanzhu, type) "
+                "insert into toutiao_author(id, name, media_id, fensi, guanzhu, type) "
                 "VALUES "
                 "('%s', '%s', '%s', '%s', '%s', '%s')"
                 %
@@ -61,7 +61,7 @@ def save(item):
         print "\n"
 
         if item['mediaId'] > 0:
-            count = ling_con.count("select * from author_list where id='%s'"
+            count = ling_con.count("select * from toutiao_author where id='%s'"
                                    %
                                    item['id']
                                    )
@@ -69,7 +69,7 @@ def save(item):
                 pass
             else:
                 ling_con.insert(
-                    "insert into author_list(id, name, media_id, fensi, guanzhu, type) "
+                    "insert into toutiao_author(id, name, media_id, fensi, guanzhu, type) "
                     "VALUES "
                     "('%s', '%s', '%s', '%s', '%s', '%s')"
                     %
@@ -109,9 +109,13 @@ if __name__ == '__main__':
             print e
             raise Exception('session.cookies.load error ')
 
-        respond = session.get(base_url.format(user_id), headers=header, timeout=10)
-        session.cookies.save()
-        user_id += 1
+        try:
+            respond = session.get(base_url.format(user_id), headers=header, timeout=10)
+            session.cookies.save()
+        except Exception as e:
+            print e
+            raise Exception(' request get  fail  session.get(base_url.format(user_id), headers=header, timeout=10)')
+
         if respond and respond.status_code == 200:
             print "get respond"
         else:
@@ -137,7 +141,7 @@ if __name__ == '__main__':
             # print user
         else:
             continue
-        time.sleep(0.5)
+        time.sleep(1)
         index += 1
         if index > 1000:
             break

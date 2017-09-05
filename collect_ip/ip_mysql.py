@@ -1,5 +1,8 @@
 # -*- coding: UTF-8 -*-
 import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 sys.path.append("/Users/ling/PycharmProjects/py_dome/")
 from base_class.base_mysql import MysqlBase
 
@@ -7,6 +10,7 @@ from base_class.base_mysql import MysqlBase
 class IpMysql(MysqlBase):
 
     def delip(self, ip):
+        self.cursor = self.db.cursor()
         try:
             self.cursor.execute(" DELETE from  pi_pool where id = {}".format(ip))
             self.db.commit()
@@ -16,8 +20,11 @@ class IpMysql(MysqlBase):
             self.db.rollback()
             print 'rollback delip'
             return False
+        finally:
+            self.cursor.close()
 
     def totalall(self):
+        self.cursor = self.db.cursor()
         total = 100000
         try:
             self.cursor.execute("SELECT COUNT(*) FROM pi_pool")
@@ -25,9 +32,12 @@ class IpMysql(MysqlBase):
         except Exception, e:
             print 'IpMysql total error:'
             print e
+        finally:
+            self.cursor.close()
         return total
 
     def totalofdisabelip(self):
+        self.cursor = self.db.cursor()
         total = 0
         try:
             self.cursor.execute("SELECT COUNT(*) FROM pi_pool WHERE state = 1 ")
@@ -35,10 +45,13 @@ class IpMysql(MysqlBase):
         except Exception, e:
             print 'IpMysql totalofdisabelip error:'
             print e
+        finally:
+            self.cursor.close()
         return total
 
     def save(self, data):
         if self.haveip(data['ip']) == 0:
+            self.cursor = self.db.cursor()
             try:
                 self.cursor.execute(" INSERT INTO pi_pool(ip, port, type) VALUE('{}', {}, {})"
                                     .format(data['ip'], data['port'], data['type']))
@@ -48,9 +61,12 @@ class IpMysql(MysqlBase):
                 print data
                 print 'rollback save'
                 self.db.rollback()
+            finally:
+                self.cursor.close()
 
     def updatedisableip(self, data):
         if self.haveip(data['ip']) == 0:
+            self.cursor = self.db.cursor()
             try:
                 self.cursor.execute("SELECT id from pi_pool WHERE state = 1 LIMIT 1")
                 ip_id = self.cursor.fetchone()[0]
@@ -62,8 +78,11 @@ class IpMysql(MysqlBase):
                 print 'IpMysql updatedisableip error:'
                 print e
                 self.db.rollback()
+            finally:
+                self.cursor.close()
 
     def disableip(self, ip):
+        self.cursor = self.db.cursor()
         try:
             self.cursor.execute(
                 "UPDATE pi_pool SET state = 1 WHERE ip = '{}'"
@@ -73,8 +92,11 @@ class IpMysql(MysqlBase):
             print 'IpMysql updatedisableip error:'
             print e
             self.db.rollback()
+        finally:
+            self.cursor.close()
 
     def getrandomip(self):
+        self.cursor = self.db.cursor()
         data = {}
         try:
             self.cursor.execute("SELECT "
@@ -102,12 +124,26 @@ class IpMysql(MysqlBase):
         except Exception, e:
             print 'IpMysql getrandomip error:'
             print e
+        finally:
+            self.cursor.close()
         return data
 
     def totalip(self):
-        pass
+        self.cursor = self.db.cursor()
+        total = 0
+        try:
+            self.cursor.execute("SELECT COUNT(*) FROM pi_pool WHERE state = 0 ")
+            total = self.cursor.fetchone()[0]
+        except Exception, e:
+            print 'IpMysql totalip error:'
+            print e
+        finally:
+            self.cursor.close()
+        # time.sleep(2)
+        return total
 
     def haveip(self, ip):
+        self.cursor = self.db.cursor()
         try:
             res = self.cursor.execute(" SELECT * FROM pi_pool WHERE ip='{}'".format(ip))
             return res
@@ -115,4 +151,16 @@ class IpMysql(MysqlBase):
             print 'IpMysql haveip error'
             print e
             return False
+        finally:
+            self.cursor.close()
 
+    @staticmethod
+    def check_exception(e):
+        str_error = str(e.message)
+        if "ConnectTimeoutError" in str_error:
+            return True
+        if "[Errno 60] Operation timed out" in str_error:
+            return True
+        if "[Errno 61] Connection refused" in str_error:
+            return True
+        return False

@@ -9,12 +9,12 @@ import json
 import os
 import sys
 import re
-from pyquery import PyQuery as pq
 
 sys.path.append("../")
 from collect_ip.ip_mysql import IpMysql
 from base_class.SSDB import SSDB
 from base_class.config import Config
+from base_class import func
 
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -38,26 +38,26 @@ agent = [
     "Opera/9.80 (Macintosh; Intel Mac OS X 10.6.8; U; fr) Presto/2.9.168 Version/11.52"
     ]
 category = [
-        # "news_hot",                 # 热点
-        # "news_society",             # 社会
+        "news_hot",                 # 热点
+        "news_society",             # 社会
         "news_entertainment",       # 娱乐
-        # "news_tech",                # 科技
-        # "news_sports",              # 体育
-        # "news_car",                 # 汽车
-        # "news_finance",             # 财经
-        # "funny",                    # 搞笑
-        # "news_military",            # 军事
-        # "news_fashion",             # 时尚
-        # "news_discovery",           # 探索
-        # "news_regimen",             # 养生
-        # "news_essay",               # 美文
-        # "news_history",             # 历史
-        # "news_world",               # 国际
-        # "news_travel",              # 旅游
-        # "news_baby",                # 育儿
-        # "news_story",               # 故事
-        # "news_game",                # 游戏
-        # "news_food"                 # 美食
+        "news_tech",                # 科技
+        "news_sports",              # 体育
+        "news_car",                 # 汽车
+        "news_finance",             # 财经
+        "funny",                    # 搞笑
+        "news_military",            # 军事
+        "news_fashion",             # 时尚
+        "news_discovery",           # 探索
+        "news_regimen",             # 养生
+        "news_essay",               # 美文
+        "news_history",             # 历史
+        "news_world",               # 国际
+        "news_travel",              # 旅游
+        "news_baby",                # 育儿
+        "news_story",               # 故事
+        "news_game",                # 游戏
+        "news_food"                 # 美食
     ]
 api_uri = "http://www.toutiao.com/api/pc/feed/?category={0}&utm_source=toutiao&widen=1&max_behot_time={1}&max_behot_time_tmp=0&tadrequire=false"
 reg = re.compile(r'[0-9]+')  # "media_url": "/c/user/5739097906/",
@@ -122,11 +122,9 @@ class TTSpider(object):
             self.request_index[t] = 0
             tf = threading.Thread(target=TTSpider.work, args=(self,), name=t)
             th.append(tf)
-
-        t = threading.Thread(target=TTSpider.data_save_work, args=(self,), name='data_queue')
-        th.append(t)
-
         t = threading.Thread(target=TTSpider.ip_out_work, args=(self,), name='ip_out_queue')
+        th.append(t)
+        t = threading.Thread(target=TTSpider.data_save_work, args=(self,), name='data_queue')
         th.append(t)
 
         for t in th:
@@ -144,10 +142,12 @@ class TTSpider(object):
         behot_time = 0
         work_index = 3
         self.__update_request()
-        while work_index:
+        while os.path.exists(self.pid_file_path) and self.pid == self.get_pid_str() and work_index:
+            print 'work'
             work_index -= 1
+
             response = self.request(api_uri.format(name, behot_time))
-            behot_time += 20
+
             try:
                 json_res = response.json()
             except Exception, e:
@@ -193,87 +193,10 @@ class TTSpider(object):
         response = self.request(arcurl)
 
         if response is not None:
-            text = unicode(response.content, encoding='utf-8')  # 解决乱码问题
-            dom = pq(text).make_links_absolute(response.url)
-
             title, number = re.subn("'", "\\'", str(data.get("title")))  # 解决 单引号 插入数据库 出错问题
-            if data['article_genre'] == "gallery":
-                s = re.search(r'gallery[\s]*=[\s]*{[\s\S]+(};)', dom.html())
-                if s:
-                    # print s.group()
-                    res = s.group()
-                    content_obj = self.get_json_obj(res)
-                    if content_obj:
-                        try:
-                            sub_images = content_obj['sub_images']
-                            sub_abstracts = content_obj['sub_abstracts']
-                            content = ''
-                            for a in range(len(sub_images)):
-                                content = content + "<p>&darr;{0}</p>\n<p><img src=\"{1}\" alt=\"{2}\"/></p>\n".format(
-                                    sub_abstracts[a], sub_images[a]['url'], title)
-                            content = "<div>\n{}</div>\n".format(content)
-                            # print content
-                        except Exception, e:
-                            print('error:')
-                            print(e.message)
-                            return None
-                            # print st
-                    else:
-                        print('error: article_genre == gallery  --> search nothing1')
-                        print(res)
-                        return None
-                else:
-                    figures = dom('figure')
-                    content = ''
-                    if figures:
-                        for figure in figures.items():
-                            print figure.find('img')
-                            content = content + "<p>&darr;{0}</p>\n<p><img src=\"{1}\" alt=\"{2}\"/></p>\n".format(
-                                figure.text(), figure.find('img').attr('alt-src'), title)
-                        content = "<div>\n{}</div>\n".format(content)
-                    else:
-                        print('error: article_genre == gallery  --> search nothing2')
-                        print(dom.html())
-                        return None
-                pass
-            else:
-                content = dom.find(".article-content").html()
-                print(u"find -->content 1")
-                if not content or not len(content):
-                    print(u"find -->content 2")
-                    content = dom('article').html()
+            data['title'] = title
 
-                if not content or not len(content):
-                    print(u"find -->content 3")
-                    content = dom.find('.article-main').html()
-
-                if not content or not len(content):
-                    print(u"find -->content 4")
-                    content = dom.find('.rich_media_content').html()
-
-                if not content or not len(content):
-                    print(u"find -->content 5")
-                    content = dom.find(".text").html()
-
-                if not content or not len(content):
-                    print(u"find -->content 6")
-                    content = dom.find(".contentMain").html()
-
-                if not content or not len(content):
-                    print(u"find -->content 7")
-                    content = dom.find('.textindent2em').html()
-
-                if not content or not len(content):
-                    print(u"find -->content 8")
-                    content = dom.find('.f14').html()
-
-                if not content or not len(content):
-                    print(u"find -->content 9")
-                    content = dom.find('.m-detail-bd').html()
-
-                if not content or not len(content):
-                    print(u"find -->content 10")
-                    content = dom.find('.artical-content').html()
+            content = func.get_article(response, data)
 
             if content:
                 # toutiao_article_category 分类 数据源
@@ -300,7 +223,10 @@ class TTSpider(object):
                         item['author_id'] = 0
                 else:
                     item['author_id'] = 0
-
+                name = threading.currentThread().name
+                print name
+                if name == "news_hot":
+                    item['is_hot'] = 1
                 print('push save queue!!')
                 # 放入队列
                 print(u"put queue start")
@@ -312,44 +238,11 @@ class TTSpider(object):
                 print(u"put queue over")
             else:
                 print(u"url:{} -->not find content".format(arcurl))
-                print(u"content:{}".format(dom))
+                print(u"content:{}".format(response.content))
         else:
             print(u"url: {} --->article respond is null !!".format(arcurl))
 
         return True
-
-    def get_json_obj(self, string_1):
-        print 'start'
-        reg1 = re.compile(r'{((?!}).)*')
-        reg2 = re.compile(r'}((?!{).)*')
-        reg3 = re.compile(r'{')
-        reg4 = re.compile(r'}')
-        string_1 = re.sub(r'[^{}]*', '', string_1, 1)
-        index1 = 0
-        index2 = 0
-        res = ''
-        while index1 != index2 or index1 == 0:
-            s = reg1.search(string_1)
-            if s:
-                res = res + s.group()
-                index1 = len(reg3.findall(s.group())) + index1
-                string_1 = reg1.sub("", string_1, 1)
-            else:
-                pass
-            s = reg2.search(string_1)
-            if s:
-                res = res + s.group()
-                index2 = len(reg4.findall(s.group())) + index2
-                string_1 = reg2.sub("", string_1, 1)
-            else:
-                pass
-        s = re.search(r'{[\s\S]*}', res)
-        if s:
-            res = s.group()
-            res = json.loads(res)
-        else:
-            res = ''
-        return res
 
     def request(self, base_url, retries=3):
 
@@ -478,10 +371,10 @@ class TTSpider(object):
 
                 res = self.__ling_post(u"http://localhost:8082/addArticle", item)
                 time.sleep(1)
-                if res.get('result') == 200:
+                print u"save response:", res
+                if res.get('status_code') == 200:
                     self.ssdb.request('set', [item['source_url'], item.get('group_id')])
                     self.ssdb.request('expire', [item['source_url'], 60 * 60 * 24 * 1])  # 1天有效期
-                    print u"save response:", res
                 else:
                     print 'error !!!  无法 保存 数据！！！！'
                     self.del_pid_file()
@@ -490,7 +383,7 @@ class TTSpider(object):
                 index += 1
                 print u'no item sleep 3s'
                 time.sleep(3)
-                if index >= 20 or threading.active_count() <= 7:
+                if index >= 20 or threading.active_count() <= 4:
                     self.del_pid_file()
         self.del_pid_file()
         print 'data_save_work queue is over'
@@ -546,8 +439,6 @@ class TTSpider(object):
         print '__del__ --> TouTiaoSpiderOne'
 
 if __name__ == "__main__":
-    os.system("cd " + os.path.dirname(os.path.realpath(__file__)))
-
     a = TTSpider()
     a.run()
 

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from py_class.lingspider import LingSpider
+from base_class.ling_request import LingRequest
 from py_class.SSDB import SSDB
 import re
 import os
@@ -7,6 +8,7 @@ import time
 import threading
 import requests
 import json
+import random
 from pyquery import PyQuery as pq
 
 
@@ -36,12 +38,13 @@ class TouTiaoSpiderOne(LingSpider):
 
     api_url = "http://www.toutiao.com/api/pc/feed/?category={0}&utm_source=toutiao&widen=1&max_behot_time={1}&max_behot_time_tmp=0&tadrequire=false&as=A175990077EECF2&cp=59078EBCCFF2DE1"
 
-    for_times_model_one = 2
-    for_times_model_two = 3
+    for_times_model_one = 1
+    for_times_model_two = 2
     index = {}
     behot_time = {}
     url = {}
     model = {}
+    request = {}
 
     reg = re.compile(r'[0-9]+')  # "media_url": "/c/user/5739097906/",
 
@@ -51,7 +54,9 @@ class TouTiaoSpiderOne(LingSpider):
             self.behot_time[t] = 0
             self.index[t] = None
             self.url[t] = None
-            self.model[t] = ["one", "two"]
+            self.model[t] = ["two"]
+            self.request[t] = LingRequest()
+            time.sleep(random.randint(1, 5))
         self.ssdb = SSDB('127.0.0.1', 8888)
         print u'TouTiaoSpider -> init'
 
@@ -65,7 +70,11 @@ class TouTiaoSpiderOne(LingSpider):
         model = self.model[name]
         index = self.index[name]
         behot_time = self.behot_time[name]
-
+        request = self.request[name]
+        print name
+        if not request:
+            print "request is null"
+            return False
         # 处理 循环条件
         if model is None or len(model) <= 0:
             return False
@@ -101,28 +110,26 @@ class TouTiaoSpiderOne(LingSpider):
         self.log(index, u"ling --> 循环次数")
         self.log(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(behot_time)), u"ling --> 循环时间戳")
         # 列表数据
-        res, response = self.ling_request(self.api_url.format(name, behot_time))
-        if res['status_code'] == 110:
-            return False
-        if res['status_code'] == 404:
+        response = request.request(self.api_url.format(name, behot_time))
+        try:
+            json_res = response.json()
+        except Exception, e:
+            print "response.json() ->> error "
+            print e.message
+            print response.content
             return None
-        while res['status_code'] == 403:
-            res, response = self.ling_request(self.api_url.format(name, behot_time))
-            time.sleep(10)
-
-        json = response.json()
         try:
             if len(model) >= 1 and model[0] == 'two':
-                behot_time = json["next"]["max_behot_time"]
+                behot_time = json_res["next"]["max_behot_time"]
                 self.behot_time[name] = behot_time
 
-            arclist = [item for item in json["data"]
+            arclist = [item for item in json_res["data"]
                        if (item["article_genre"] == "article" or item["article_genre"] == "gallery")
                        and item["source"] != u"头条问答" and item["source"] != u"专题"]
             self.log(arclist)
         except Exception, e:
             print u"article list 处理出现错误 ！！", e.message
-            print u"article list: ", json['data']
+            print u"article list: ", json_res['data']
             self.log(u"error:")
             self.log(e.message)
             return None
@@ -130,10 +137,11 @@ class TouTiaoSpiderOne(LingSpider):
         # 文章获取
         if arclist and len(arclist) >= 1:
             for data in arclist:
-                self.get_article(data)
+                self.get_article(data, request)
 
     def save(self, item):
         res = self.__ling_post(u"http://localhost:8082/addArticle", item)
+        time.sleep(4)
         if res.get('result') == 200:
             self.ssdb.request('set', [item['source_url'], item.get('group_id')])
             self.ssdb.request('expire', [item['source_url'], 60 * 60 * 24 * 1])  # 1天有效期
@@ -141,7 +149,7 @@ class TouTiaoSpiderOne(LingSpider):
             self.log(item)
         return res
 
-    def get_article(self, data):
+    def get_article(self, data, request):
         item = {}
 
         if data.get("source_url"):
@@ -158,16 +166,7 @@ class TouTiaoSpiderOne(LingSpider):
             pass
 
         arcurl = "http://www.toutiao.com{}".format(data["source_url"])
-        res, response = self.ling_request(arcurl)
-
-        if res['status_code'] == 110:
-            return False
-        if res['status_code'] == 404:
-            return None
-        while res['status_code'] == 403:
-            self.log('sleep--->> 20s')
-            time.sleep(20)
-            res, response = self.ling_request(arcurl)
+        response = request.request(arcurl)
 
         if response is not None:
             text = unicode(response.content, encoding='utf-8')  # 解决乱码问题
@@ -175,7 +174,7 @@ class TouTiaoSpiderOne(LingSpider):
 
             title, number = re.subn("'", "\\'", str(data.get("title")))  # 解决 单引号 插入数据库 出错问题
             if data['article_genre'] == "gallery":
-                s = re.search(r'var[\s]+gallery[\s]*=[\s]*{[\s\S]+(};)', dom.html())
+                s = re.search(r'gallery[\s]*=[\s]*{[\s\S]+(};)', dom.html())
                 if s:
                     # print s.group()
                     res = s.group()
@@ -215,32 +214,41 @@ class TouTiaoSpiderOne(LingSpider):
                 pass
             else:
                 content = dom.find(".article-content").html()
-
+                self.log(u"find -->content 1")
                 if not content or not len(content):
+                    self.log(u"find -->content 2")
                     content = dom('article').html()
 
                 if not content or not len(content):
+                    self.log(u"find -->content 3")
                     content = dom.find('.article-main').html()
 
                 if not content or not len(content):
+                    self.log(u"find -->content 4")
                     content = dom.find('.rich_media_content').html()
 
                 if not content or not len(content):
+                    self.log(u"find -->content 5")
                     content = dom.find(".text").html()
 
                 if not content or not len(content):
+                    self.log(u"find -->content 6")
                     content = dom.find(".contentMain").html()
 
                 if not content or not len(content):
+                    self.log(u"find -->content 7")
                     content = dom.find('.textindent2em').html()
 
                 if not content or not len(content):
+                    self.log(u"find -->content 8")
                     content = dom.find('.f14').html()
 
                 if not content or not len(content):
+                    self.log(u"find -->content 9")
                     content = dom.find('.m-detail-bd').html()
 
                 if not content or not len(content):
+                    self.log(u"find -->content 10")
                     content = dom.find('.artical-content').html()
 
             if content:
@@ -271,13 +279,16 @@ class TouTiaoSpiderOne(LingSpider):
 
                 self.log('push save queue!!')
                 # 放入队列
+                self.log(u"put queue start")
                 try:
                     self.q.put_nowait(item)
                 except Exception, e:
                     self.log('error : put queue error ')
                     self.log(e.message)
+                self.log(u"put queue over")
             else:
                 self.log(u"url:{} -->not find content".format(arcurl))
+                self.log(u"content:{}".format(dom))
         else:
             self.log(u"url: {} --->article respond is null !!".format(arcurl))
 

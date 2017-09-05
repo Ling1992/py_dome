@@ -14,7 +14,7 @@ class MysqlLing(object):
     def __new__(cls, *args, **kwargs):
         if not cls.__instance:
             cls.__instance = super(MysqlLing, cls).__new__(cls, *args, **kwargs)
-            cls.db = MySQLdb.connect("localhost", "root", "root", "ling_python_test2", charset="utf8")
+            cls.db = MySQLdb.connect("localhost", "root", "root", "ling_index", charset="utf8")
             cls.cursor = cls.db.cursor()
             print 'MysqlLing __new__ '
         return cls.__instance
@@ -50,7 +50,7 @@ class MysqlLing(object):
                 fensi = row[3]
                 guanzhu = row[4]
                 author_type = row[5]
-                data.append({'id': author_id, 'name': name, 'media_id': media_id, 'fensi': fensi, 'guanzhu': guanzhu, 'type': author_type})
+                data.append({'author_id': author_id, 'name': name, 'media_id': media_id, 'fensi': fensi, 'guanzhu': guanzhu, 'type': author_type})
         except Exception, e:
             print e
         return data

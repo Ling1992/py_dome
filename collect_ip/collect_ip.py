@@ -145,11 +145,11 @@ def save(data):
     #     else:  # 否则 添加
     if sql.totalip() >= 1000:
         # 只需要更新 失效的 ip
-        if sql.totalofdisabelip() >= 1:
-            # 存在失效 ip
-            sql.updatedisableip(data)
-            pass
-        else:
+        # if sql.totalofdisabelip() >= 1:
+        #     # 存在失效 ip
+        #     sql.updatedisableip(data)
+        #     pass
+        # else:
             exit('ip 已经更新到 1000 有效')
     else:
         # 只做 新增

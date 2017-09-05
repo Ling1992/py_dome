@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 
-startTime=`date "+%Y-%m-%d 06:00:00"`
-startTimeStamp=`date -j -f '%Y-%m-%d %H:%M:%S' "$startTime" +%s`
+echo $BASH_SOURCE
 
-endTime=`date "+%Y-%m-%d 23:00:00"`
-endTimeStamp=`date -j -f '%Y-%m-%d %H:%M:%S' "$endTime" +%s`
+filename=$(basename "$BASH_SOURCE")
+echo ${filename}
+extension="${filename##*.}" # 删掉最后一个 .  及其左边的字符串
+filename="${filename%.*}"   # 删掉最后一个 .  及其右边的字符串
 
-currentTimeStamp=`date +%s`
+tips="
+    use info:\n
+    ${filename}.${extension} start\n
+    ${filename}.${extension} stop\n
+";
+opts=("start", "stop")
 
-if [ $currentTimeStamp -lt $startTimeStamp ] || [ $currentTimeStamp -ge $endTimeStamp ] ; then
-    echo 'start'
-    exit
+if [ ${#} -ne 1 ];then
+    echo -e ${tips}
 fi
-
-echo 'aa'

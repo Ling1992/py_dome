@@ -20,14 +20,14 @@ endTimeStamp=`date -j -f '%Y-%m-%d %H:%M:%S' "$endTime" +%s`
 currentTimeStamp=`date +%s`
 
 if [ $currentTimeStamp -lt $startTimeStamp ] || [ $currentTimeStamp -ge $endTimeStamp ] ; then
-    echo '晚上11点到 凌晨6点 不进行任务:'`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_run.log'
+    echo '晚上11点到 凌晨6点 不能启动任务:'`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_output'
     exit
 fi
 
-
 echo '任务开始: '`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_run.log'
 
-# 判断 .py 是否 未 完成
+
+# 判断 .py_class 是否 未 完成
 var=10
 while [ $var -gt 0 ]
 do
@@ -39,7 +39,7 @@ do
 
     if [ $count -gt 1 ]
     then
-        echo '存在 未完成 get_user.py 进程 ！！进程:$pid 详情:$re' >> $shlogdir`date +%Y-%m-%d`'_run.log'
+        echo '存在 未完成 get_user.py_class 进程 ！！进程:$pid 详情:$re' >> $shlogdir`date +%Y-%m-%d`'_run.log'
         echo '肯存在问题 请及时处理' >> $shlogdir`date +%Y-%m-%d`'_run.log'
         kill -15 $pid
     else

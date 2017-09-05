@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 from pyquery import PyQuery as pq
+from ip_mysql import IpMysql
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -28,49 +29,18 @@ def strtoint(time_str):
 
 if __name__ == u'__main__':
     print 'run'
+    sql = IpMysql({'db': 'python_bases'})
+    # # 设置 state 为 0
+    sql.disableip('113.133.86.172')
+    # # 随机 获取 state 为 1 的 ip
 
-    html = None
-    with open('./test.html', 'r') as f:
-        html = f.read()
-    if html:
-        dom = pq(html)
-        trs = dom('table')('tr')
-        i = 0
-        for tr in trs.items():
-            i += 1
-            if i == 1:
-                continue
-            else:
-                tds = tr('td')
-                data = {}
-                j = 0
-                for td in tds.items():
-                    j += 1
-                    if j == 2:
-                        data['ip'] = td.html()
-                    if j == 3:
-                        data['port'] = td.html()
-                    if j == 6:
-                        data['type'] = td.html()
-                    if j == 7:
-                        race = strtosecond(td('div').attr('title'))
-                        if race > 5:
-                            data = {}
-                            continue
-                    if j == 8:
-                        connect_time = strtosecond(td('div').attr('title'))
-                        if connect_time > 5:
-                            data = {}
-                            continue
-                    if j == 9:
-                        effective_time = strtosecond(td.html())
-                        if effective_time <= 120:
-                            data = {}
-                            continue
-                if data:
-                    print data
-                    print '-' * 88
-        pass
-
+    data = sql.getrandomip()
+    print data['type']
+    print '{}://{}:{}'.format(data['type'], data['ip'], data['port'])
+    print sql.haveip('113.133.86.1721')
+    if sql.haveip('113.133.86.1721') is False:
+        print 'yes'
+    else:
+        print 'no'
     pass
 

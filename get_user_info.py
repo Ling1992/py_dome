@@ -27,7 +27,7 @@ class MysqlLing(object):
     def __new__(cls, *args, **kwargs):
         if not cls.__instance:
             cls.__instance = super(MysqlLing, cls).__new__(cls, *args, **kwargs)
-            cls.db = MySQLdb.connect("localhost", "root", "root", "ling_index", charset="utf8")
+            cls.db = MySQLdb.connect("119.23.212.58", "ling", "LING-ling110412", "ling_index", charset="utf8")
             cls.cursor = cls.db.cursor()
             print 'MysqlLing __new__ '
         return cls.__instance
