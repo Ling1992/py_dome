@@ -18,10 +18,13 @@ from base_class import func
 import json
 import os
 import HTMLParser
+import lrequest
+import warnings
 import sys
 reload(sys)
 sys.setdefaultencoding("utf8")
 from base_class.config import Config
+
 
 
 def loop(loops, **kwargs):
@@ -62,50 +65,6 @@ base_url = "http://www.toutiao.com/group/6456945339805991438/"
 
 
 if __name__ == '__main__':
-    # with open(cookies_path, 'w') as f:
-    #     f.write("")
-    # session = requests.session()
-    # session.keep_alive = False
-    # session.cookies = cookielib.LWPCookieJar(filename=cookies_path)
-    # header = {
-    #     "Host": "www.toutiao.com",
-    #     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_3) AppleWebKit/535.20 (KHTML, like Gecko) Chrome/19.0.1036.7 Safari/535.20",
-    # }
-    # session.get("http://www.toutiao.com/", headers=header, timeout=10)
-    # session.cookies.save()
-    #
-    # proxies = {'https': 'https://111.165.209.49:53281'}
-    #
-    # session = requests.session()
-    # session.keep_alive = False
-    # session.cookies = cookielib.LWPCookieJar(filename=cookies_path)
-    #
-    # header = {
-    #     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_3) AppleWebKit/535.20 (KHTML, like Gecko) Chrome/19.0.1036.7 Safari/535.20",
-    # }
-    #
-    # try:
-    #     session.cookies.load(ignore_discard=True)
-    # except Exception as e:
-    #     print u"session.cookies.load error : ", e.message
-    #
-    # respond = session.get(base_url, timeout=5, proxies=proxies)
-    #
-    # article = func.get_article(respond, {'title': 'aaa', 'article_genre': 'gallery'})
-
-    # print respond.status_code, respond.reason
-
-    # with open('test.html', 'w') as f:
-    #     f.write(respond.content)
-
-    # content = None
-    with open('test.html', 'r') as f:
-        content = f.read()
-    text = unicode(content, encoding='utf-8')  # 解决乱码问题
-    dom = pq(text).make_links_absolute("http://www.baidu.com")
-    article = func.get_article_two(dom.html(), 'galleryInfo', 'gallery')
-    if not article:
-        article = func.get_article_two(dom.html(), "gallery")
-    # article = func.get_article_one(content, 'articleInfo', 'content')
-    print article
+    lrequest.request('http://www.toutiao.com')
+    pass
 

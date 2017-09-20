@@ -164,3 +164,5 @@ class IpMysql(MysqlBase):
         if "[Errno 61] Connection refused" in str_error:
             return True
         return False
+
+
