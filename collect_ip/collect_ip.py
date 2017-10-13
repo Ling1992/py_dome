@@ -135,11 +135,15 @@ if __name__ == u'__main__':
     # # 1 判断 ip 是否存在 并且是有效的
     # # 处理逻辑
     url = "http://www.xicidaili.com/nn/{}"
+        
     index = 1
     sql.insert("DELETE from  pi_pool where state = 1")
 
+    if sql.totalip() >= 1000:
+        exit('ip 已经更新到 1000 有效')
+
     while os.path.exists(pid_file) and (current_pid == getpidfromfile(pid_file)):
-        lrequest.request(url.format(index), callback=dealresponse)
+        lrequest.request(url.format(index), callback=dealresponse, headers={"host": "www.xicidaili.com"})
 
         index += 1
         if index >= 1800:

@@ -11,14 +11,6 @@ then
     mkdir $shlogdir
 fi
 
-echo '任务开始: '`date +'%Y-%m-%d %H:%M:%S'` >> $shlogdir`date +%Y-%m-%d`'_run.log'
-
-# 判断 pid 文件
-if [ -e "cache/get_user_info.pid" ]; then
-    echo 'get_user_info.pid 文件已经存在 请及时处理' >> ${shlogdir}`date +%Y-%m-%d`'_run.log'
-    exit
-fi
-
 echo 'start-->>'`date +'%Y-%m-%d %H:%M:%S'` >> ${shlogdir}`date +%Y-%m-%d`'_run.log'
 
 envpath='/Users/ling/.test1vem/bin/'  &&

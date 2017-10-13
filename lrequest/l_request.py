@@ -35,8 +35,9 @@ class LRequest(object):
         if headers is None:
             headers = {}
         headers['User-Agent'] = self.agent
-        kwargs.setdefault("proxies", self.proxies)
-        kwargs.setdefault("headers", headers)
+        kwargs["headers"] = headers
+        if self.sql is not None:
+            kwargs["proxies"] = self.proxies
         proxies = kwargs.get("proxies")
 
         self.index += 1
@@ -53,9 +54,8 @@ class LRequest(object):
         try:
             print url, proxies
             respond = session.get(url, timeout=6, **kwargs)
-
+            session.cookies.save()
             if respond and respond.status_code == 200:  # 请求成功
-                session.cookies.save()
                 time.sleep(5)  # 请求 间隔
                 if callback:
                     callback(respond)
@@ -67,10 +67,10 @@ class LRequest(object):
                 return self.request(url, retries, callback, **kwargs)
             elif respond.status_code == 404:
                 return None
-            elif respond.status_code == 403 or respond.status_code == 502:    # # 主要是 403 502 代理被封
+            elif respond.status_code == 403 or respond.status_code == 502 or respond.status_code == 503:    # # 主要是 403 502 代理被封
                 print 'error:'
                 print respond.status_code, respond.reason, url
-                time.sleep((4 - retries) * 5)
+                time.sleep((5 - retries) * 5)
                 self.update_arg()
                 if respond.status_code == 502:
                     headers['host'] = None   # # 头条 会出现该问题
@@ -79,14 +79,14 @@ class LRequest(object):
             else:   # # 未知 错误 出现
                 print '未知错误 error:'
                 print respond.status_code, respond.reason, url
-                time.sleep((4 - retries) * 5)
+                time.sleep((5 - retries) * 5)
                 self.update_arg()
                 return self.request(url, retries-1, callback, **kwargs)
         except Exception as e:
             if func.check_ip_exception(e):  # # 代理 拒绝 或 连接 超时
                 print 'proxy error \n', e.message
-                self.sql.disable_ip(self.ip_data['ip'])
-                self.update_arg(2)
+                # self.sql.disable_ip(self.ip_data['ip'])
+                self.update_arg(1)
                 time.sleep(3)
                 return self.request(url, retries, callback, **kwargs)
             elif "Connection aborted" in e.message:
@@ -96,6 +96,7 @@ class LRequest(object):
                 pass
             else:
                 print u"无法连接网络 ！！！", e.message
+                self.update_arg()
                 time.sleep(5)
                 if retries <= 1:
                     exit('无法连接网络 ！！！')
@@ -106,13 +107,13 @@ class LRequest(object):
     def update_arg(self, update_type=0):
         if update_type == 0:
             self.agent = func.get_random_agent()
-            if self.sql:
+            if self.sql is not None:
                 self.ip_data = self.sql.get_random_ip()
                 self.proxies = {
                     self.ip_data['type']: "{}://{}:{}".format(self.ip_data['type'], self.ip_data['ip'],
                                                               self.ip_data['port'])}
         elif update_type == 1:
-            if self.sql:
+            if self.sql is not None:
                 self.ip_data = self.sql.get_random_ip()
                 self.proxies = {
                     self.ip_data['type']: "{}://{}:{}".format(self.ip_data['type'], self.ip_data['ip'],
